@@ -94,10 +94,17 @@ agentcore configure -e src/agents/github_agent/runtime.py --non-interactive
 agentcore launch
 ```
 
-### 4. Test
+### 4. Test (with User ID)
 
 ```bash
-agentcore invoke '{"prompt": "list my repositories"}'
+# User ID is REQUIRED for OAuth 3LO (Three-Legged OAuth)
+agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
+
+# Why --user-id?
+# - 3LO = "on behalf of a user" (not just the app)
+# - Each user gets isolated OAuth tokens
+# - AgentCore Identity stores tokens per user
+# - Your data stays YOUR data (never shared)
 ```
 
 ---
