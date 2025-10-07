@@ -90,6 +90,30 @@ agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
 
 ---
 
+## 🏗️ Architecture
+
+![Architecture Diagram](docs/images/architecture.png)
+
+**How it works:**
+
+1. **User Invokes Agent** with their user ID
+2. **AgentCore Runtime** checks for existing OAuth token for that user
+3. **If no token**: Triggers OAuth Device Flow
+   - User visits authorization URL
+   - Authorizes the GitHub app
+   - AgentCore Identity stores token (encrypted, per-user)
+4. **If token exists**: Retrieves user's token from AgentCore Identity
+5. **Agent Tools** use the token to call GitHub API
+6. **Response** returned to the user with their data
+
+**Key Components:**
+- 🔐 **AgentCore Identity**: Manages user-specific OAuth tokens
+- 🤖 **Bedrock Runtime**: Serverless agent execution environment
+- 🛠️ **Tools Layer**: GitHub API integration with httpx
+- 🔑 **Credential Provider**: GitHub OAuth app configuration
+
+---
+
 ## 📁 Project Structure (Following Notebook Pattern)
 
 ```
