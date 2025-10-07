@@ -1,0 +1,44 @@
+[project]
+name = "multi-agent-platform"
+version = "0.1.0"
+description = "Multi-agent platform with GitHub, Jira, Slack agents"
+requires-python = ">=3.10"
+dependencies = [
+    "bedrock-agentcore[strands-agents]>=0.1.0",
+    "bedrock-agentcore-starter-toolkit>=0.1.0",
+    "strands-agents>=0.1.0",
+    "httpx>=0.27.0",
+    "typer>=0.12.0",
+    "python-dotenv>=1.0.0",
+    "boto3>=1.39.15",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[project.scripts]
+github-agent = "agents.github_agent.__main__:app"
+
+[tool.poe.tasks]
+# GitHub agent tasks
+github = "python -m agents.github_agent"
+github-auth = "python -m agents.github_agent auth"
+github-invoke = "python -m agents.github_agent invoke"
+github-tools = "python -m agents.github_agent tools list"
+
+# Testing
+test = "pytest tests/"
+test-github = "pytest tests/agents/test_github_agent.py"
+
+# Development
+sync = "uv sync"
+sync-dev = "uv sync --all-extras"
