@@ -6,7 +6,13 @@
 src/agents/
   github_agent/runtime.py     # GitHub agent with OAuth 3LO
   planning_agent/runtime.py   # Planning agent (stateless)
+
+Dockerfile                    # Default (GitHub agent)
+Dockerfile.github             # GitHub agent specific
+Dockerfile.planning           # Planning agent specific
 ```
+
+**Important**: Each agent requires its specific Dockerfile to be copied as "Dockerfile" before deployment. The poe tasks handle this automatically.
 
 ## Command Patterns
 
