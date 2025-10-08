@@ -9,6 +9,54 @@ Complete guide for setting up AWS Bedrock AgentCore from scratch in a new AWS ac
 - Python 3.10+ installed
 - `uv` package manager installed
 
+---
+
+## 🚀 Quick Start (Copy & Paste All Commands)
+
+**For experienced users - complete setup in 5 minutes:**
+
+```bash
+# 1. Set region
+export AWS_REGION=ap-southeast-2
+
+# 2. Verify Bedrock access
+aws bedrock-agentcore list-runtimes --region $AWS_REGION
+
+# 3. Install dependencies
+uv sync --all-extras
+
+# 4. Configure all agents
+agentcore configure -e src/agents/github_agent/runtime.py --region $AWS_REGION --non-interactive
+agentcore configure -e src/agents/planning_agent/runtime.py --region $AWS_REGION --non-interactive
+agentcore configure -e src/agents/jira_agent/runtime.py --region $AWS_REGION --non-interactive
+agentcore configure -e src/agents/coding_agent/runtime.py --region $AWS_REGION --non-interactive
+agentcore configure -e src/agents/orchestrator_agent/runtime.py --region $AWS_REGION --non-interactive
+
+# 5. Create ECR repositories
+aws ecr create-repository --repository-name bedrock-agentcore-github_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-planning_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-jira_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-coding_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent --region $AWS_REGION
+
+# 6. Setup GitHub OAuth provider (for GitHub agent)
+python setup_github_provider.py
+
+# 7. Deploy all agents
+uv run poe deploy-github
+uv run poe deploy-planning
+uv run poe deploy-jira
+uv run poe deploy-coding
+uv run poe deploy-orchestrator
+
+# 8. Test
+uv run poe invoke-planning '{"prompt": "Hello"}' --user-id "test"
+```
+
+**Continue reading for detailed explanations of each step.**
+
+---
+
 ## Step 1: AWS Account Setup
 
 ### 1.1 Choose AWS Region
@@ -169,23 +217,96 @@ JIRA_API_TOKEN=your_jira_api_token
 
 ## Step 6: Initialize AgentCore Configuration
 
-### 6.1 Create `.bedrock_agentcore.yaml`
+### 6.1 Available Agents in This Repository
 
-The AgentCore CLI generates this file automatically on first deployment, but you can create it manually:
+This repository contains 5 production-ready agents:
+
+| Agent | Purpose | OAuth Required | Key Features |
+|-------|---------|----------------|--------------|
+| **github_agent** | GitHub integration | ✅ Yes (3LO) | Repos, issues, PRs management |
+| **planning_agent** | Implementation planning | ❌ No | Generate plans from requirements |
+| **jira_agent** | JIRA integration | ❌ No (API token) | Fetch tickets, update status |
+| **coding_agent** | Code execution | ❌ No | Execute plans in isolated workspaces |
+| **orchestrator_agent** | Workflow coordination | ❌ No | Coordinate multi-agent workflows |
+
+### 6.2 Configure All Agents (Copy & Run)
+
+Run these commands to configure all agents. The first agent creates `.bedrock_agentcore.yaml`, subsequent agents add to it.
+
+#### Option 1: Configure All Agents at Once
 
 ```bash
-# For first agent deployment
+# Set your AWS region
+export AWS_REGION=ap-southeast-2
+
+# 1. GitHub Agent (OAuth required)
 agentcore configure \
   --entrypoint src/agents/github_agent/runtime.py \
   --region $AWS_REGION \
   --non-interactive
+
+# 2. Planning Agent
+agentcore configure \
+  --entrypoint src/agents/planning_agent/runtime.py \
+  --region $AWS_REGION \
+  --non-interactive
+
+# 3. JIRA Agent
+agentcore configure \
+  --entrypoint src/agents/jira_agent/runtime.py \
+  --region $AWS_REGION \
+  --non-interactive
+
+# 4. Coding Agent
+agentcore configure \
+  --entrypoint src/agents/coding_agent/runtime.py \
+  --region $AWS_REGION \
+  --non-interactive
+
+# 5. Orchestrator Agent
+agentcore configure \
+  --entrypoint src/agents/orchestrator_agent/runtime.py \
+  --region $AWS_REGION \
+  --non-interactive
 ```
 
-This creates `.bedrock_agentcore.yaml` with:
+#### Option 2: Configure Individual Agents
+
+Choose which agents you need:
+
+**GitHub Agent** (OAuth - list repos, create issues):
+```bash
+agentcore configure -e src/agents/github_agent/runtime.py --region ap-southeast-2 --non-interactive
+```
+
+**Planning Agent** (Generate implementation plans):
+```bash
+agentcore configure -e src/agents/planning_agent/runtime.py --region ap-southeast-2 --non-interactive
+```
+
+**JIRA Agent** (Fetch tickets, update status):
+```bash
+agentcore configure -e src/agents/jira_agent/runtime.py --region ap-southeast-2 --non-interactive
+```
+
+**Coding Agent** (Execute code in isolated workspaces):
+```bash
+agentcore configure -e src/agents/coding_agent/runtime.py --region ap-southeast-2 --non-interactive
+```
+
+**Orchestrator Agent** (Coordinate multi-agent workflows):
+```bash
+agentcore configure -e src/agents/orchestrator_agent/runtime.py --region ap-southeast-2 --non-interactive
+```
+
+### 6.3 What This Creates
+
+After running configure, you'll have `.bedrock_agentcore.yaml` with:
 - AWS account ID and region
 - Default execution roles
 - ECR repository settings
 - Memory configuration
+- Agent-specific settings (OAuth, observability, etc.)
 
 ### 6.2 Manual `.bedrock_agentcore.yaml` Template
 
@@ -257,65 +378,216 @@ aws bedrock-agentcore create-credential-provider \
   }'
 ```
 
-## Step 8: First Agent Deployment
+## Step 8: Deploy All Agents
 
-### 8.1 Create ECR Repository
+### 8.1 Create ECR Repositories (One-Time Setup)
+
+Create ECR repositories for all agents before deployment:
 
 ```bash
-# Create repository for your agent
-aws ecr create-repository \
-  --repository-name bedrock-agentcore-github_agent \
-  --region $AWS_REGION
+# Set your AWS region
+export AWS_REGION=ap-southeast-2
+
+# Create ECR repositories for all agents
+aws ecr create-repository --repository-name bedrock-agentcore-github_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-planning_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-jira_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-coding_agent --region $AWS_REGION
+aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent --region $AWS_REGION
 ```
 
-### 8.2 Deploy Agent
+**Note:** If repository already exists, you'll get an error - that's okay, skip to next step.
+
+### 8.2 Deploy All Agents Using Poe Tasks
+
+This repository includes `poethepoet` tasks in `pyproject.toml` for easy deployment:
 
 ```bash
-# Deploy using AgentCore CLI
-agentcore launch
+# Ensure you're authenticated to AWS
+aws_use mingfang  # or your AWS profile
 
-# What happens:
-# 1. Creates IAM execution roles (if auto_create: true)
-# 2. Creates CodeBuild project for ARM64 container builds
-# 3. Builds Docker image in the cloud (no local Docker needed!)
-# 4. Pushes to ECR
-# 5. Creates AgentCore runtime
-# 6. Sets up CloudWatch logging
-# 7. Activates endpoint
+# Deploy all agents (one by one)
+uv run poe deploy-github
+uv run poe deploy-planning
+uv run poe deploy-jira
+uv run poe deploy-coding
+uv run poe deploy-orchestrator
 ```
 
-### 8.3 Verify Deployment
+**What each deploy command does:**
+1. Copies agent-specific Dockerfile to root
+2. Creates IAM execution roles (if auto_create: true)
+3. Creates CodeBuild project for ARM64 builds
+4. Builds Docker image in the cloud (no local Docker!)
+5. Pushes to ECR
+6. Creates AgentCore runtime
+7. Sets up CloudWatch logging
+8. Activates endpoint
+
+### 8.3 Alternative: Deploy Using AgentCore CLI
+
+If you prefer using `agentcore` CLI directly:
 
 ```bash
-# Check agent status
+# Deploy each agent individually
+agentcore launch -a github_agent
+agentcore launch -a planning_agent
+agentcore launch -a jira_agent
+agentcore launch -a coding_agent
+agentcore launch -a orchestrator_agent
+```
+
+### 8.4 Verify All Deployments
+
+```bash
+# Check status of all agents
 agentcore status
 
-# List deployed agents
+# List all deployed runtimes
 aws bedrock-agentcore list-runtimes --region $AWS_REGION
+
+# Check specific agent
+agentcore status --agent github_agent
 ```
 
-## Step 9: Test Your Agent
+**Expected Output:**
+```
+✅ Agent: github_agent
+   ARN: arn:aws:bedrock-agentcore:ap-southeast-2:123456789012:runtime/github_agent-xyz
+   Status: ACTIVE
+   Endpoint: READY
 
-### 9.1 Invoke Agent
+✅ Agent: planning_agent
+   ARN: arn:aws:bedrock-agentcore:ap-southeast-2:123456789012:runtime/planning_agent-abc
+   Status: ACTIVE
+   Endpoint: READY
 
-```bash
-# Invoke with user ID (required for OAuth)
-agentcore invoke '{"prompt": "Hello"}' --user-id "test-user"
-
-# For GitHub agent
-agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
+... (and so on for all agents)
 ```
 
-### 9.2 View Logs
+## Step 9: Test All Agents
+
+### 9.1 Test Each Agent Using Poe Tasks
+
+Quick test commands for all agents:
 
 ```bash
-# Get agent ARN from deployment output or status
-AGENT_ARN="arn:aws:bedrock-agentcore:ap-southeast-2:123456789012:runtime/github_agent-xyz"
+# 1. GitHub Agent (requires OAuth - user will authorize via browser)
+uv run poe invoke-github '{"prompt": "list my repositories"}' --user-id "test-user"
 
-# Tail logs
-aws logs tail /aws/bedrock-agentcore/runtimes/github_agent-xyz/DEFAULT \
+# 2. Planning Agent (generate implementation plan)
+uv run poe invoke-planning '{"prompt": "Create a plan for implementing user authentication"}' --user-id "test"
+
+# 3. JIRA Agent (fetch JIRA ticket - replace PROJ-123 with real ticket)
+uv run poe invoke-jira '{"prompt": "Get details for PROJ-123"}' --user-id "test"
+
+# 4. Coding Agent (setup workspace and execute code)
+uv run poe invoke-coding '{"prompt": "Setup a new workspace"}' --user-id "test"
+
+# 5. Orchestrator Agent (coordinate workflow)
+uv run poe invoke-orchestrator '{"prompt": "Based on PROJ-123, implement feature in myorg/myrepo"}' --user-id "test"
+```
+
+### 9.2 Detailed Test Examples Per Agent
+
+#### GitHub Agent Tests
+```bash
+# List repositories
+uv run poe invoke-github '{"prompt": "list my repositories"}' --user-id "alice"
+
+# Get repo info
+uv run poe invoke-github '{"prompt": "show me details about myorg/myrepo"}' --user-id "alice"
+
+# Create repository
+uv run poe invoke-github '{"prompt": "create a new repository called test-project"}' --user-id "alice"
+
+# List issues
+uv run poe invoke-github '{"prompt": "show issues in myorg/myrepo"}' --user-id "alice"
+```
+
+#### Planning Agent Tests
+```bash
+# Generate implementation plan
+uv run poe invoke-planning '{"prompt": "Create a plan for adding JWT authentication"}' --user-id "test"
+
+# Create architecture plan
+uv run poe invoke-planning '{"prompt": "Design a microservices architecture for e-commerce"}' --user-id "test"
+```
+
+#### JIRA Agent Tests
+```bash
+# Fetch ticket (replace with your ticket ID)
+uv run poe invoke-jira '{"prompt": "Get details for PROJ-123"}' --user-id "test"
+
+# Parse requirements
+uv run poe invoke-jira '{"prompt": "Parse requirements from PROJ-456"}' --user-id "test"
+
+# Update status
+uv run poe invoke-jira '{"prompt": "Move PROJ-123 to In Progress"}' --user-id "test"
+
+# Add comment
+uv run poe invoke-jira '{"prompt": "Add comment to PROJ-123: Implementation started"}' --user-id "test"
+```
+
+#### Coding Agent Tests
+```bash
+# Setup workspace
+uv run poe invoke-coding '{"prompt": "Setup a new workspace"}' --user-id "test"
+
+# Create file
+uv run poe invoke-coding '{"prompt": "Create a file hello.py with print(\"Hello World\")"}' --user-id "test"
+
+# Run command
+uv run poe invoke-coding '{"prompt": "Run python hello.py"}' --user-id "test"
+
+# Run tests
+uv run poe invoke-coding '{"prompt": "Run the test suite"}' --user-id "test"
+```
+
+#### Orchestrator Agent Tests
+```bash
+# Full workflow
+uv run poe invoke-orchestrator '{"prompt": "Based on PROJ-123, implement user login in acme/webapp"}' --user-id "test"
+
+# Parse request
+uv run poe invoke-orchestrator '{"prompt": "Parse this: Fix bug in PROJ-456"}' --user-id "test"
+
+# Test workflow
+uv run poe invoke-orchestrator '{"prompt": "Run tests for authentication module"}' --user-id "test"
+```
+
+### 9.3 View Logs for Specific Agent
+
+```bash
+# Set your agent ID (get from deployment output or agentcore status)
+GITHUB_AGENT_ID="github_agent-xyz123"
+PLANNING_AGENT_ID="planning_agent-abc456"
+JIRA_AGENT_ID="jira_agent-def789"
+CODING_AGENT_ID="coding_agent-ghi012"
+ORCHESTRATOR_AGENT_ID="orchestrator_agent-jkl345"
+
+# Tail logs for any agent
+aws logs tail /aws/bedrock-agentcore/runtimes/${GITHUB_AGENT_ID}/DEFAULT \
   --follow \
   --region $AWS_REGION
+
+# View recent logs (last 1 hour)
+aws logs tail /aws/bedrock-agentcore/runtimes/${JIRA_AGENT_ID}/DEFAULT \
+  --since 1h \
+  --region $AWS_REGION
+```
+
+### 9.4 Using AgentCore CLI Directly
+
+Alternative to poe tasks:
+
+```bash
+# Invoke any agent
+agentcore invoke -a github_agent '{"prompt": "list my repositories"}' --user-id "alice"
+agentcore invoke -a planning_agent '{"prompt": "create a plan"}' --user-id "test"
+agentcore invoke -a jira_agent '{"prompt": "get PROJ-123"}' --user-id "test"
+agentcore invoke -a coding_agent '{"prompt": "setup workspace"}' --user-id "test"
+agentcore invoke -a orchestrator_agent '{"prompt": "coordinate workflow"}' --user-id "test"
 ```
 
 ## Step 10: Deploy Additional Agents
