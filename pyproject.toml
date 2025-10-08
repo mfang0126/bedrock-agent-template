@@ -49,8 +49,10 @@ test-agent = "pytest"  # Usage: poe test-agent <path>
 # Note: Each agent needs its specific Dockerfile copied before deployment
 deploy-github = { shell = "cp Dockerfile.github Dockerfile && agentcore launch -a github_agent" }
 deploy-planning = { shell = "cp Dockerfile.planning Dockerfile && agentcore launch -a planning_agent" }
+deploy-jira = { shell = "cp Dockerfile.jira Dockerfile && agentcore launch -a jira_agent" }
 invoke-github = "agentcore invoke -a github_agent"  # Usage: poe invoke-github '{"prompt": "..."}' --user-id "test"
 invoke-planning = "agentcore invoke -a planning_agent"  # Usage: poe invoke-planning '{"prompt": "..."}' --user-id "test"
+invoke-jira = "agentcore invoke -a jira_agent"  # Usage: poe invoke-jira '{"prompt": "..."}' --user-id "test"
 
 # Development
 sync = "uv sync"
