@@ -47,8 +47,8 @@ test-agent = "pytest"  # Usage: poe test-agent <path>
 
 # Deployment (requires: aws_use mingfang first)
 # Note: Each agent needs its specific Dockerfile copied before deployment
-deploy-github = ["cp Dockerfile.github Dockerfile", "agentcore launch -a github_agent"]
-deploy-planning = ["cp Dockerfile.planning Dockerfile", "agentcore launch -a planning_agent"]
+deploy-github = { shell = "cp Dockerfile.github Dockerfile && agentcore launch -a github_agent" }
+deploy-planning = { shell = "cp Dockerfile.planning Dockerfile && agentcore launch -a planning_agent" }
 invoke-github = "agentcore invoke -a github_agent"  # Usage: poe invoke-github '{"prompt": "..."}' --user-id "test"
 invoke-planning = "agentcore invoke -a planning_agent"  # Usage: poe invoke-planning '{"prompt": "..."}' --user-id "test"
 
