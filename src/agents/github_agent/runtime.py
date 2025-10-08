@@ -6,8 +6,8 @@ This module follows the notebook pattern for AWS Bedrock AgentCore Runtime deplo
 import sys
 from pathlib import Path
 
-# Add parent directories to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent

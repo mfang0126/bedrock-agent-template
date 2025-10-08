@@ -42,4 +42,4 @@ COPY . .
 
 # Use the full module path
 
-CMD ["opentelemetry-instrument", "python", "-m", "src.entrypoint"]
+CMD ["opentelemetry-instrument", "python", "-m", "src.agents.github_agent.runtime"]

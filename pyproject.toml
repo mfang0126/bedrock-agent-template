@@ -35,14 +35,20 @@ github-auth = "python -m agents.github_agent auth"
 github-invoke = "python -m agents.github_agent invoke"
 github-tools = "python -m agents.github_agent tools list"
 
+# Planning agent tasks
+planning = "python -m src.agents.planning_agent.runtime"
+
 # Testing
 test = "pytest tests/"
 test-github = "pytest tests/agents/test_github_agent.py"
+test-planning = "pytest tests/agents/test_planning_agent.py"
 test-agent = "pytest"  # Usage: poe test-agent <path>
 
-# Deployment (requires: authenticate --to=wealth-dev-au first)
-deploy = "agentcore launch"
-invoke = "agentcore invoke"  # Usage: poe invoke '{"prompt": "..."}' --user-id "test"
+# Deployment (requires: aws_use mingfang first)
+deploy-github = "agentcore launch -a github_agent"
+deploy-planning = "agentcore launch -a planning_agent"
+invoke-github = "agentcore invoke -a github_agent"  # Usage: poe invoke-github '{"prompt": "..."}' --user-id "test"
+invoke-planning = "agentcore invoke -a planning_agent"  # Usage: poe invoke-planning '{"prompt": "..."}' --user-id "test"
 
 # Development
 sync = "uv sync"
