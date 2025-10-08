@@ -40,5 +40,5 @@ EXPOSE 8000
 # Copy entire project (respecting .dockerignore)
 COPY . .
 
-# GitHub Agent specific entrypoint
-CMD ["opentelemetry-instrument", "python", "-m", "src.agents.github_agent.runtime"]
+# Planning Agent specific entrypoint
+CMD ["opentelemetry-instrument", "python", "-m", "src.agents.planning_agent.runtime"]
