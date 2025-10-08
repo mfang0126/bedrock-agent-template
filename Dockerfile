@@ -40,6 +40,5 @@ EXPOSE 8000
 # Copy entire project (respecting .dockerignore)
 COPY . .
 
-# Use the full module path
-
+# Default CMD - AgentCore may override this based on entrypoint configuration
 CMD ["opentelemetry-instrument", "python", "-m", "src.agents.github_agent.runtime"]
