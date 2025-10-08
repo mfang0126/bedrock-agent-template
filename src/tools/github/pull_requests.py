@@ -2,49 +2,53 @@
 
 These tools make direct API calls using httpx and the global access token
 from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the global github_access_token that is set by the entrypoint.
 """
 
 import httpx
 from strands import tool
-from bedrock_agentcore.identity.auth import requires_access_token
 import sys
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Import auth module (not the variable directly!)
+from src.common.auth import github as github_auth
+
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def create_pull_request(
+def create_pull_request(
     repo_name: str,
     title: str,
     head_branch: str,
     base_branch: str = "main",
     body: str = "",
-    draft: bool = False,
-    *,
-    access_token: str
+    draft: bool = False
 ) -> str:
     """Create a new pull request in a GitHub repository.
 
     Args:
         repo_name: Repository name (format: owner/repo)
-        title: Pull request title
-        head_branch: Branch containing changes
-        base_branch: Target branch (default: main)
-        body: Pull request description
-        draft: Create as draft PR (default: False)
+        title: PR title
+        head_branch: Branch with changes
+        base_branch: Target branch (default: "main")
+        body: PR description/body
+        draft: Create as draft PR
 
     Returns:
         Success message with PR details
     """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
+    # Prepare PR data
     pr_data = {
         "title": title,
         "head": head_branch,
@@ -64,18 +68,15 @@ async def create_pull_request(
             response.raise_for_status()
             pr = response.json()
 
-            draft_str = " (Draft)" if pr.get('draft') else ""
+            draft_status = " (Draft)" if draft else ""
             return f"""✅ Pull request created successfully!
 
-🔀 #{pr['number']}: {pr['title']}{draft_str}
+📝 PR #{pr['number']}: {pr['title']}{draft_status}
    Repository: {repo_name}
    {head_branch} → {base_branch}
 
-📝 Description:
+Description:
 {body if body else '(No description provided)'}
-
-Status: {pr['state']}
-Mergeable: {pr.get('mergeable', 'Unknown')}
 
 🔗 {pr['html_url']}"""
 
@@ -86,12 +87,7 @@ Mergeable: {pr.get('mergeable', 'Unknown')}
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def list_pull_requests(repo_name: str, state: str = "open", *, access_token: str) -> str:
+def list_pull_requests(repo_name: str, state: str = "open") -> str:
     """List pull requests in a GitHub repository.
 
     Args:
@@ -101,6 +97,11 @@ async def list_pull_requests(repo_name: str, state: str = "open", *, access_toke
     Returns:
         Formatted string with PR information
     """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
@@ -108,7 +109,7 @@ async def list_pull_requests(repo_name: str, state: str = "open", *, access_toke
             response = client.get(
                 f"https://api.github.com/repos/{repo_name}/pulls",
                 headers=headers,
-                params={"state": state, "per_page": 30},
+                params={"state": state},
                 timeout=30.0
             )
             response.raise_for_status()
@@ -121,23 +122,25 @@ async def list_pull_requests(repo_name: str, state: str = "open", *, access_toke
             result_lines = [f"Pull Requests in {repo_name} ({state}):\n"]
 
             for pr in prs:
-                draft_str = " (Draft)" if pr.get('draft') else ""
-                pr_line = f"🔀 #{pr['number']}: {pr['title']}{draft_str}"
+                # PR number and title
+                draft_indicator = " [DRAFT]" if pr.get('draft') else ""
+                pr_line = f"📝 #{pr['number']}: {pr['title']}{draft_indicator}"
                 result_lines.append(pr_line)
 
                 # Branch info
                 result_lines.append(f"   {pr['head']['ref']} → {pr['base']['ref']}")
 
-                # Author and date
-                author = pr['user']['login']
+                # Created date and author
                 created = pr['created_at'][:10]
-                result_lines.append(f"   👤 {author} | Created: {created}")
+                author = pr['user']['login']
+                result_lines.append(f"   Created: {created}")
+                result_lines.append(f"   👤 Created by: {author}")
 
                 # Status
-                mergeable = pr.get('mergeable')
-                status = "✅ Mergeable" if mergeable else "⚠️ Conflicts" if mergeable is False else "❓ Unknown"
-                result_lines.append(f"   Status: {status}")
-                result_lines.append("")
+                if pr.get('mergeable_state'):
+                    result_lines.append(f"   Status: {pr['mergeable_state']}")
+
+                result_lines.append("")  # Empty line
 
             result_lines.append(f"Total: {len(prs)} {state} pull requests")
             return "\n".join(result_lines)
@@ -149,39 +152,35 @@ async def list_pull_requests(repo_name: str, state: str = "open", *, access_toke
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def merge_pull_request(
+def merge_pull_request(
     repo_name: str,
     pr_number: int,
-    merge_method: str = "squash",
-    *,
-    access_token: str
+    merge_method: str = "merge"
 ) -> str:
     """Merge a pull request in a GitHub repository.
 
     Args:
         repo_name: Repository name (format: owner/repo)
-        pr_number: Pull request number to merge
-        merge_method: Merge method - "merge", "squash", or "rebase" (default: squash)
+        pr_number: PR number to merge
+        merge_method: Merge method - "merge", "squash", or "rebase"
 
     Returns:
-        Success message with merge details
+        Success message
     """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     # Validate merge method
-    valid_methods = ["merge", "squash", "rebase"]
-    if merge_method not in valid_methods:
-        return f"❌ Invalid merge method. Use one of: {', '.join(valid_methods)}"
+    if merge_method not in ["merge", "squash", "rebase"]:
+        return "❌ Invalid merge method. Use 'merge', 'squash', or 'rebase'."
 
-    # Check if PR is mergeable first
     try:
         with httpx.Client() as client:
-            # Get PR info
+            # Get PR details first
             pr_response = client.get(
                 f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}",
                 headers=headers,
@@ -189,12 +188,6 @@ async def merge_pull_request(
             )
             pr_response.raise_for_status()
             pr = pr_response.json()
-
-            if pr['state'] != 'open':
-                return f"❌ Pull request is {pr['state']}, cannot merge."
-
-            if pr.get('mergeable') is False:
-                return "❌ Pull request has conflicts and cannot be merged."
 
             # Merge the PR
             merge_response = client.put(
@@ -204,20 +197,16 @@ async def merge_pull_request(
                 timeout=30.0
             )
             merge_response.raise_for_status()
-            merge_result = merge_response.json()
 
             return f"""✅ Pull request merged successfully!
 
 Repository: {repo_name}
 PR: #{pr_number}
 Title: {pr['title']}
+Merge Method: {merge_method}
+Status: Merged
 
-Merge method: {merge_method}
-Commit SHA: {merge_result['sha'][:7]}
-
-{pr['head']['ref']} → {pr['base']['ref']}
-
-The pull request has been successfully merged into {pr['base']['ref']}."""
+The changes have been merged into {pr['base']['ref']}."""
 
     except httpx.HTTPStatusError as e:
         return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"

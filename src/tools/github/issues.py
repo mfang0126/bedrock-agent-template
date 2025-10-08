@@ -2,26 +2,25 @@
 
 These tools make direct API calls using httpx and the global access token
 from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the github_access_token that is set by the entrypoint.
 """
 
 import httpx
 from strands import tool
-from bedrock_agentcore.identity.auth import requires_access_token
-from typing import List
 import sys
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Import auth module (not the variable directly!)
+from src.common.auth import github as github_auth
+
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def list_github_issues(repo_name: str, state: str = "open", *, access_token: str) -> str:
+def list_github_issues(repo_name: str, state: str = "open") -> str:
     """List issues in a GitHub repository.
 
     Args:
@@ -31,6 +30,13 @@ async def list_github_issues(repo_name: str, state: str = "open", *, access_toke
     Returns:
         Formatted string with issue information
     """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
@@ -77,18 +83,11 @@ async def list_github_issues(repo_name: str, state: str = "open", *, access_toke
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def create_github_issue(
+def create_github_issue(
     repo_name: str,
     title: str,
     body: str = "",
-    labels: str = "",
-    *,
-    access_token: str
+    labels: str = ""
 ) -> str:
     """Create a new issue in a GitHub repository.
 
@@ -101,6 +100,12 @@ async def create_github_issue(
     Returns:
         Success message with issue details
     """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -148,12 +153,7 @@ async def create_github_issue(
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def close_github_issue(repo_name: str, issue_number: int, *, access_token: str) -> str:
+def close_github_issue(repo_name: str, issue_number: int) -> str:
     """Close an issue in a GitHub repository.
 
     Args:
@@ -163,6 +163,13 @@ async def close_github_issue(repo_name: str, issue_number: int, *, access_token:
     Returns:
         Success message
     """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
@@ -192,12 +199,7 @@ The issue has been marked as resolved."""
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def post_github_comment(repo_name: str, issue_number: int, comment: str, *, access_token: str) -> str:
+def post_github_comment(repo_name: str, issue_number: int, comment: str) -> str:
     """Post a comment on a GitHub issue.
 
     Args:
@@ -208,6 +210,13 @@ async def post_github_comment(repo_name: str, issue_number: int, comment: str, *
     Returns:
         Success message with comment details
     """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
@@ -239,19 +248,12 @@ Author: {comment_data['user']['login']}
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def update_github_issue(
+def update_github_issue(
     repo_name: str,
     issue_number: int,
     state: str = None,
     labels: str = None,
-    assignees: str = None,
-    *,
-    access_token: str
+    assignees: str = None
 ) -> str:
     """Update an issue's state, labels, or assignees.
 
@@ -265,6 +267,12 @@ async def update_github_issue(
     Returns:
         Success message with updated issue details
     """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
 
     headers = {"Authorization": f"Bearer {access_token}"}
 

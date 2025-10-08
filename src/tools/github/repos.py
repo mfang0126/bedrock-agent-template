@@ -2,32 +2,38 @@
 
 These tools make direct API calls using httpx and the global access token
 from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the global github_access_token that is set by the entrypoint.
 """
 
 import httpx
 from strands import tool
-from bedrock_agentcore.identity.auth import requires_access_token
 import sys
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Import auth module (not the variable directly!)
+from src.common.auth import github as github_auth
+
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def list_github_repos(*, access_token: str) -> str:
-    """List user's private GitHub repositories.
+def list_github_repos() -> str:
+    """List user's GitHub repositories.
 
     Returns:
         Formatted string with repository information
     """
+    # Access token via module attribute (not direct import)
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     print(f"🔍 Fetching GitHub repositories...")
-    print(f"🔑 Access token received: {access_token[:20]}..." if access_token else "❌ No access token!")
+    print(f"🔑 Using access token: {access_token[:20]}...")
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -58,21 +64,14 @@ async def list_github_repos(*, access_token: str) -> str:
             if not repos:
                 return f"No repositories found for {username}."
 
-            # Format repository information
-            result_lines = [f"GitHub repositories for {username}:\n"]
+            # Limit to first 3 repos to avoid timeout
+            repos = repos[:3]
+            total_count = repos_data.get('total_count', len(repos))
 
-            for repo in repos:
-                repo_line = f"📁 {repo['name']}"
-                if repo.get('language'):
-                    repo_line += f" ({repo['language']})"
-                repo_line += f" - ⭐ {repo['stargazers_count']}"
-                result_lines.append(repo_line)
+            # Minimal plain text format
+            repo_names = [repo['name'] for repo in repos]
 
-                if repo.get('description'):
-                    result_lines.append(f"   {repo['description']}")
-                result_lines.append("")  # Empty line for spacing
-
-            return "\n".join(result_lines)
+            return f"You have {total_count} repositories. First 3: {', '.join(repo_names)}"
 
     except httpx.HTTPStatusError as e:
         return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
@@ -81,12 +80,7 @@ async def list_github_repos(*, access_token: str) -> str:
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def get_repo_info(repo_name: str, *, access_token: str) -> str:
+def get_repo_info(repo_name: str) -> str:
     """Get detailed information about a specific repository.
 
     Args:
@@ -95,6 +89,11 @@ async def get_repo_info(repo_name: str, *, access_token: str) -> str:
     Returns:
         Detailed repository information
     """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
@@ -154,17 +153,10 @@ URL: {repo['html_url']}
 
 
 @tool
-@requires_access_token(
-    provider_name="github-provider",
-    scopes=["repo", "read:user"],
-    auth_flow='USER_FEDERATION',
-)
-async def create_github_repo(
+def create_github_repo(
     name: str,
     description: str = "",
-    private: bool = False,
-    *,
-    access_token: str
+    private: bool = False
 ) -> str:
     """Create a new GitHub repository.
 
@@ -176,6 +168,11 @@ async def create_github_repo(
     Returns:
         Success message with repository details
     """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:

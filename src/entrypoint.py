@@ -54,23 +54,7 @@ agent = Agent(
         list_pull_requests,
         merge_pull_request,
     ],
-    system_prompt="""You are a helpful GitHub assistant that helps users manage their GitHub repositories, issues, and pull requests.
-
-You have access to tools for:
-- Listing repositories
-- Getting repository information
-- Creating repositories
-- Listing issues
-- Creating issues
-- Closing issues
-- Posting comments on issues
-- Updating issues (state, labels, assignees)
-- Creating pull requests
-- Listing pull requests
-- Merging pull requests
-
-When users ask about their GitHub account, use the appropriate tools to help them.
-Provide clear, friendly responses with relevant information formatted nicely."""
+    system_prompt="""You are a GitHub assistant. Use your tools to help users with repositories, issues, and pull requests. Authentication is automatic - never ask for tokens."""
 )
 
 
@@ -79,17 +63,48 @@ async def strands_agent_github(payload):
     """AgentCore Runtime entrypoint.
 
     This function is called by AgentCore Runtime when the agent is invoked.
-    GitHub OAuth authentication is handled automatically by the @requires_access_token decorators.
+
+    IMPORTANT: OAuth is initialized BEFORE agent runs. If OAuth URL is generated,
+    we return it to the user immediately.
 
     Args:
         payload: Request payload containing user input
 
     Returns:
-        Agent response
+        Agent response or OAuth URL
     """
+    from src.common.auth.github import get_github_access_token, pending_oauth_url
+
     user_input = payload.get("prompt", "")
     print(f"📥 User input: {user_input}")
 
+    # Initialize GitHub OAuth - this will trigger OAuth flow if no token exists
+    print("🔐 Initializing GitHub authentication...")
+    try:
+        await get_github_access_token()
+        print("✅ GitHub authentication successful")
+    except Exception as e:
+        print(f"⚠️ GitHub authentication pending or failed: {e}")
+
+    # Check if OAuth URL was generated
+    if pending_oauth_url:
+        oauth_message = f"""🔐 GitHub Authorization Required
+
+Please visit this URL to authorize access to your GitHub account:
+
+{pending_oauth_url}
+
+After authorizing, please run your command again to access your GitHub data."""
+
+        print("📤 Returning OAuth URL to user")
+        return {
+            "result": {
+                "role": "assistant",
+                "content": [{"text": oauth_message}]
+            }
+        }
+
+    # OAuth successful, proceed with agent
     response = agent(user_input)
 
     print(f"📤 Agent response: {response.message}")

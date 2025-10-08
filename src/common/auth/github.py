@@ -2,6 +2,8 @@
 
 This module implements GitHub OAuth using bedrock_agentcore's @requires_access_token decorator.
 Follows the official AWS sample: runtime_with_strands_and_egress_github_3lo.ipynb
+
+KEY PATTERN: OAuth function is separate from tools. Tools reference the global token.
 """
 
 import asyncio
@@ -11,20 +13,25 @@ from bedrock_agentcore.identity.auth import requires_access_token
 # Global token storage (set by OAuth flow)
 github_access_token: Optional[str] = None
 
+# Global storage for OAuth URL to return to user
+pending_oauth_url: Optional[str] = None
+
 
 async def on_auth_url(url: str):
     """Callback for authorization URL.
 
-    In AgentCore Runtime, this URL is returned to the user for authorization.
-    In local testing, we would print it or open browser.
+    Stores URL globally so it can be returned to the user.
 
     Args:
         url: Authorization URL for user to visit
     """
+    global pending_oauth_url
+    pending_oauth_url = url
+
     print(f"\n{'=' * 60}")
     print(f"🔐 GitHub Authorization Required")
     print(f"{'=' * 60}")
-    print(f"\n🌐 Please visit this URL to authorize:")
+    print(f"\n🌐 Authorization URL generated:")
     print(f"   {url}")
     print(f"\n{'=' * 60}\n")
 
@@ -34,6 +41,7 @@ async def on_auth_url(url: str):
     scopes=["repo", "read:user"],     # GitHub OAuth scopes
     auth_flow='USER_FEDERATION',       # 3LO (on-behalf-of user)
     on_auth_url=on_auth_url,           # Authorization URL callback
+    force_authentication=False,        # Don't force re-auth if token exists
 )
 async def get_github_access_token(*, access_token: str) -> str:
     """Get GitHub access token via AgentCore Identity.
@@ -42,6 +50,7 @@ async def get_github_access_token(*, access_token: str) -> str:
     - OAuth flow with GitHub
     - Token exchange
     - Secure token storage via AgentCore Identity
+    - Automatic token refresh
 
     Args:
         access_token: Access token injected by decorator

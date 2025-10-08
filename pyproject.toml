@@ -1,5 +1,5 @@
 [project]
-name = "multi-agent-platform"
+name = "multi-agent"
 version = "0.1.0"
 description = "Multi-agent platform with GitHub, Jira, Slack agents"
 requires-python = ">=3.10"
@@ -47,3 +47,6 @@ invoke = "agentcore invoke"  # Usage: poe invoke '{"prompt": "..."}' --user-id "
 # Development
 sync = "uv sync"
 sync-dev = "uv sync --all-extras"
+
+# Debug
+aws-follow = 'aws logs tail /aws/bedrock-agentcore/runtimes/runtime-08tk23FYi7-DEFAULT --log-stream-name-prefix "2025/10/08/[runtime-logs]" --follow'
