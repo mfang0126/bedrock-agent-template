@@ -14,11 +14,19 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
 from strands.models import BedrockModel
 
-# Import planning tools
+# Import planning tools (sync)
 from src.tools.planning import (
     generate_implementation_plan,
     parse_requirements,
     validate_plan
+)
+
+# Import async planning tools
+from src.tools.planning.async_tools import (
+    submit_plan_generation,
+    submit_requirements_parsing,
+    submit_plan_validation,
+    get_task_result
 )
 
 # Create AgentCore app
@@ -35,11 +43,41 @@ model = BedrockModel(model_id=MODEL_ID, region_name=REGION)
 agent = Agent(
     model=model,
     tools=[
+        # Sync tools (immediate results)
         generate_implementation_plan,
         parse_requirements,
         validate_plan,
+        # Async tools (submit + poll pattern)
+        submit_plan_generation,
+        submit_requirements_parsing,
+        submit_plan_validation,
+        get_task_result,
     ],
-    system_prompt="""You are a planning assistant. Use your tools to help users create implementation plans, parse requirements, and validate plans."""
+    system_prompt="""You are a planning assistant. You have two modes:
+
+SYNC MODE (default for simple requests):
+- Use generate_implementation_plan, parse_requirements, validate_plan
+- Returns results immediately
+- Best for: Quick requests, simple plans
+
+ASYNC MODE (for complex operations):
+- Use submit_plan_generation, submit_requirements_parsing, submit_plan_validation
+- These tools return a task_id immediately (< 1 second)
+- IMPORTANT: After calling a submit_* tool, STOP and return the task_id message to the user
+- DO NOT call get_task_result() in the same conversation
+- User will call you again later with the task_id to check status
+- Best for: Complex plans, detailed analysis, when user prefers async
+
+Choose async mode if:
+1. User explicitly requests async/"in background"/"submit task"
+2. Request is complex and detailed
+3. User wants to continue doing other things while waiting
+
+get_task_result(task_id) is ONLY used when:
+- User provides a task_id from a previous submission
+- User asks to "check status" or "get result" for a task_id
+
+Otherwise use sync mode for simplicity."""
 )
 
 
