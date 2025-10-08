@@ -6,7 +6,9 @@ Following the GitHub agent pattern: simple, synchronous, minimal complexity.
 
 import boto3
 import json
+import time
 from strands import tool
+from botocore.exceptions import ClientError
 
 # Bedrock client configuration (Sydney region)
 MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
@@ -14,6 +16,59 @@ REGION = "ap-southeast-2"
 
 # Initialize Bedrock client
 bedrock_runtime = boto3.client('bedrock-runtime', region_name=REGION)
+
+
+def call_bedrock_with_retry(system_prompt: str, user_message: str, max_tokens: int = 4000, temperature: float = 0.7, max_retries: int = 3) -> str:
+    """Call Bedrock Converse API with exponential backoff retry.
+
+    Args:
+        system_prompt: System instructions for the model
+        user_message: User's message/request
+        max_tokens: Maximum tokens in response
+        temperature: Model temperature (0-1)
+        max_retries: Maximum retry attempts
+
+    Returns:
+        Generated text response
+
+    Raises:
+        Exception: If all retries fail
+    """
+    for attempt in range(max_retries):
+        try:
+            response = bedrock_runtime.converse(
+                modelId=MODEL_ID,
+                messages=[{
+                    "role": "user",
+                    "content": [{"text": user_message}]
+                }],
+                system=[{"text": system_prompt}],
+                inferenceConfig={
+                    "maxTokens": max_tokens,
+                    "temperature": temperature
+                }
+            )
+
+            # Success - extract and return text
+            return response['output']['message']['content'][0]['text']
+
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+
+            if error_code == 'ThrottlingException':
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 2^attempt seconds (2s, 4s, 8s)
+                    wait_time = 2 ** (attempt + 1)
+                    print(f"⏳ Throttled. Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    raise Exception(f"Bedrock throttling - max retries exceeded. Please wait 30s before trying again.")
+            else:
+                # Non-throttling error - raise immediately
+                raise Exception(f"Bedrock error: {str(e)}")
+
+    raise Exception("Unexpected retry loop exit")
 
 
 @tool
@@ -45,22 +100,13 @@ Format output in markdown with clear structure."""
 Provide a structured plan with phases, tasks, dependencies, and acceptance criteria."""
 
     try:
-        # Call Bedrock Converse API
-        response = bedrock_runtime.converse(
-            modelId=MODEL_ID,
-            messages=[{
-                "role": "user",
-                "content": [{"text": user_message}]
-            }],
-            system=[{"text": system_prompt}],
-            inferenceConfig={
-                "maxTokens": 4000,
-                "temperature": 0.7
-            }
+        # Call Bedrock with retry logic
+        plan = call_bedrock_with_retry(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            max_tokens=4000,
+            temperature=0.7
         )
-
-        # Extract plan from response
-        plan = response['output']['message']['content'][0]['text']
 
         print(f"✅ Generated plan ({len(plan)} chars)")
         return plan
@@ -99,20 +145,13 @@ Format as clear, structured markdown."""
 Break down into clear components with objectives, functional/non-functional requirements, constraints, and success criteria."""
 
     try:
-        response = bedrock_runtime.converse(
-            modelId=MODEL_ID,
-            messages=[{
-                "role": "user",
-                "content": [{"text": user_message}]
-            }],
-            system=[{"text": system_prompt}],
-            inferenceConfig={
-                "maxTokens": 3000,
-                "temperature": 0.5
-            }
+        # Call Bedrock with retry logic
+        parsed = call_bedrock_with_retry(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            max_tokens=3000,
+            temperature=0.5
         )
-
-        parsed = response['output']['message']['content'][0]['text']
 
         print(f"✅ Requirements parsed")
         return parsed
@@ -152,20 +191,13 @@ Provide concise validation report with issues and recommendations."""
 Identify gaps, risks, dependency issues, or unclear areas. Provide actionable recommendations."""
 
     try:
-        response = bedrock_runtime.converse(
-            modelId=MODEL_ID,
-            messages=[{
-                "role": "user",
-                "content": [{"text": user_message}]
-            }],
-            system=[{"text": system_prompt}],
-            inferenceConfig={
-                "maxTokens": 2000,
-                "temperature": 0.3
-            }
+        # Call Bedrock with retry logic
+        validation = call_bedrock_with_retry(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            max_tokens=2000,
+            temperature=0.3
         )
-
-        validation = response['output']['message']['content'][0]['text']
 
         print(f"✅ Plan validated")
         return validation
