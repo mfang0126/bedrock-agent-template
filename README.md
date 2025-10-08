@@ -19,7 +19,7 @@ Following the official AWS notebook pattern - tools use real GitHub API with `@r
 2. **AWS Setup**
    - AWS credentials configured (`aws configure`)
    - Bedrock AgentCore access in supported region
-   - Regions: `us-east-1`, `us-west-2`, `ap-southeast-2`, `eu-central-1`
+   - Regions: `ap-southeast-2`, `us-west-2`, `ap-southeast-2`, `eu-central-1`
 
 3. **Dependencies**
    ```bash
@@ -35,7 +35,7 @@ cp .env.example .env
 # Edit .env:
 GITHUB_CLIENT_ID=your_github_oauth_client_id
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
-AWS_REGION=us-east-1
+AWS_REGION=ap-southeast-2
 ```
 
 ### Step 2: Create GitHub Credential Provider
@@ -272,7 +272,7 @@ response = agent_core_client.invoke_agent_runtime(
 ```bash
 GITHUB_CLIENT_ID=your_oauth_client_id
 GITHUB_CLIENT_SECRET=your_oauth_client_secret
-AWS_REGION=ap-southeast-2  # or us-east-1, us-west-2, eu-central-1
+AWS_REGION=ap-southeast-2  # or ap-southeast-2, us-west-2, eu-central-1
 ```
 
 ---
@@ -394,7 +394,7 @@ uv run python setup_github_provider.py
 ```
 
 ### "No access to Bedrock AgentCore"
-- Check your AWS region (must be: us-east-1, us-west-2, ap-southeast-2, eu-central-1)
+- Check your AWS region (must be: ap-southeast-2, us-west-2, ap-southeast-2, eu-central-1)
 - Verify IAM permissions for bedrock-agentcore
 
 ### "OAuth authorization failed"

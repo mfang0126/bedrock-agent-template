@@ -38,6 +38,11 @@ github-tools = "python -m agents.github_agent tools list"
 # Testing
 test = "pytest tests/"
 test-github = "pytest tests/agents/test_github_agent.py"
+test-agent = "pytest"  # Usage: poe test-agent <path>
+
+# Deployment (requires: authenticate --to=wealth-dev-au first)
+deploy = "agentcore launch"
+invoke = "agentcore invoke"  # Usage: poe invoke '{"prompt": "..."}' --user-id "test"
 
 # Development
 sync = "uv sync"

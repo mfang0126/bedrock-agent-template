@@ -59,7 +59,7 @@ uv.lock
 *.log
 
 # Claude
-.claude/
+.claude
 
 # MCP
 .mcp/

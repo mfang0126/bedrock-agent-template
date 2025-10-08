@@ -12,7 +12,7 @@ from typing import Dict, Optional
 class CredentialProviderManager:
     """Manager for AgentCore OAuth credential providers."""
 
-    def __init__(self, region: str = "us-east-1"):
+    def __init__(self, region: str = "ap-southeast-2"):
         """Initialize credential provider manager.
 
         Args:
@@ -102,7 +102,7 @@ def setup_github_provider_from_env() -> Optional[str]:
     Reads credentials from:
     - GITHUB_CLIENT_ID
     - GITHUB_CLIENT_SECRET
-    - AWS_REGION (optional, defaults to us-east-1)
+    - AWS_REGION (optional, defaults to ap-southeast-2)
 
     Returns:
         Provider ARN if successful, None otherwise
@@ -114,7 +114,7 @@ def setup_github_provider_from_env() -> Optional[str]:
 
     client_id = os.getenv('GITHUB_CLIENT_ID')
     client_secret = os.getenv('GITHUB_CLIENT_SECRET')
-    region = os.getenv('AWS_REGION', 'us-east-1')
+    region = os.getenv('AWS_REGION', 'ap-southeast-2')
 
     if not client_id or not client_secret:
         print("❌ Error: GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET required")

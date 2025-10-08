@@ -92,7 +92,7 @@ def main():
         print()
         print("🔧 To fix:")
         print("   - Run: aws configure")
-        print("   - Check region has AgentCore: us-east-1, us-west-2, ap-southeast-2, eu-central-1")
+        print("   - Check region has AgentCore: ap-southeast-2, us-west-2, ap-southeast-2, eu-central-1")
         print("   - Delete existing provider if needed")
         print()
 

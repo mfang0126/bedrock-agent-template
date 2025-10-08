@@ -34,7 +34,6 @@ async def on_auth_url(url: str):
     scopes=["repo", "read:user"],     # GitHub OAuth scopes
     auth_flow='USER_FEDERATION',       # 3LO (on-behalf-of user)
     on_auth_url=on_auth_url,           # Authorization URL callback
-    force_authentication=True,         # Always prompt for auth
 )
 async def get_github_access_token(*, access_token: str) -> str:
     """Get GitHub access token via AgentCore Identity.

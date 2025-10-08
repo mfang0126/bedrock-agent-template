@@ -63,7 +63,7 @@ class Config:
             raise ImportError("boto3 is required for AWS Secrets Manager integration")
 
         secret_name = "github-agent/credentials"
-        region = os.getenv("AWS_REGION", "us-east-1")
+        region = os.getenv("AWS_REGION", "ap-southeast-2")
 
         client = boto3.client("secretsmanager", region_name=region)
 
@@ -81,4 +81,4 @@ class Config:
 
     def get_aws_region(self) -> str:
         """Get AWS region."""
-        return os.getenv("AWS_REGION", "us-east-1")
+        return os.getenv("AWS_REGION", "ap-southeast-2")

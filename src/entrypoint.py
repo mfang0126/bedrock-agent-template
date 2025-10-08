@@ -7,27 +7,36 @@ import sys
 from pathlib import Path
 
 # Add parent directories to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
 from strands.models import BedrockModel
 
 # Import tools
-from tools.github.repos import list_github_repos, get_repo_info, create_github_repo
-from tools.github.issues import list_github_issues, create_github_issue, close_github_issue
+from src.tools.github.repos import list_github_repos, get_repo_info, create_github_repo
+from src.tools.github.issues import (
+    list_github_issues,
+    create_github_issue,
+    close_github_issue,
+    post_github_comment,
+    update_github_issue
+)
+from src.tools.github.pull_requests import (
+    create_pull_request,
+    list_pull_requests,
+    merge_pull_request
+)
 
 # Create AgentCore app
 app = BedrockAgentCoreApp()
 
-# Model configuration (Claude 3.7 Sonnet)
-# Use cross-region inference for regions outside US
-# For us-east-1/us-west-2: use "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-# For other regions: use "anthropic.claude-3-5-sonnet-20241022-v2:0" (latest available)
+# Model configuration (Claude 3.5 Sonnet for Sydney region)
 MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+REGION = "ap-southeast-2"  # Sydney
 
 # Create Bedrock model
-model = BedrockModel(model_id=MODEL_ID)
+model = BedrockModel(model_id=MODEL_ID, region_name=REGION)
 
 # Create GitHub agent
 agent = Agent(
@@ -39,8 +48,13 @@ agent = Agent(
         list_github_issues,
         create_github_issue,
         close_github_issue,
+        post_github_comment,
+        update_github_issue,
+        create_pull_request,
+        list_pull_requests,
+        merge_pull_request,
     ],
-    system_prompt="""You are a helpful GitHub assistant that helps users manage their GitHub repositories and issues.
+    system_prompt="""You are a helpful GitHub assistant that helps users manage their GitHub repositories, issues, and pull requests.
 
 You have access to tools for:
 - Listing repositories
@@ -49,6 +63,11 @@ You have access to tools for:
 - Listing issues
 - Creating issues
 - Closing issues
+- Posting comments on issues
+- Updating issues (state, labels, assignees)
+- Creating pull requests
+- Listing pull requests
+- Merging pull requests
 
 When users ask about their GitHub account, use the appropriate tools to help them.
 Provide clear, friendly responses with relevant information formatted nicely."""
@@ -60,7 +79,7 @@ async def strands_agent_github(payload):
     """AgentCore Runtime entrypoint.
 
     This function is called by AgentCore Runtime when the agent is invoked.
-    Handles GitHub OAuth authentication flow automatically.
+    GitHub OAuth authentication is handled automatically by the @requires_access_token decorators.
 
     Args:
         payload: Request payload containing user input
@@ -71,20 +90,6 @@ async def strands_agent_github(payload):
     user_input = payload.get("prompt", "")
     print(f"📥 User input: {user_input}")
 
-    # Import the OAuth function
-    from common.auth.github import get_github_access_token, github_access_token
-
-    # Check if we need to get the token (first call or token expired)
-    if not github_access_token:
-        print("🔐 GitHub token not available, triggering OAuth flow...")
-        try:
-            await get_github_access_token()
-            print("✅ GitHub OAuth completed, token available")
-        except Exception as e:
-            print(f"❌ GitHub OAuth failed: {e}")
-            return {"result": {"role": "assistant", "content": [{"text": f"GitHub authentication failed: {e}. Please complete the OAuth flow to continue."}]}}
-
-    # Run agent with authenticated token
     response = agent(user_input)
 
     print(f"📤 Agent response: {response.message}")

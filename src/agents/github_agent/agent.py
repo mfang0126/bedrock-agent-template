@@ -22,8 +22,8 @@ def create_github_agent(mock_mode: bool = True) -> Agent:
     Returns:
         Configured Strands Agent
     """
-    # Model configuration (Claude 3.7 Sonnet)
-    model_id = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    # Model configuration (Claude 3.5 Sonnet for Sydney region)
+    model_id = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
     # Create Bedrock model
     # Note: In mock mode, this still needs AWS credentials but won't be called

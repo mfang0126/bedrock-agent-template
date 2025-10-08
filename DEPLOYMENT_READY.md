@@ -69,7 +69,7 @@ uv sync --all-extras
 # Configure GitHub OAuth credentials in .env
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
-AWS_REGION=us-east-1
+AWS_REGION=ap-southeast-2
 ```
 
 ### 2. Create Credential Provider
@@ -81,7 +81,7 @@ uv run python setup_github_provider.py
 **Expected Output:**
 ```
 ✅ SUCCESS! GitHub credential provider created
-Provider ARN: arn:aws:bedrock-agentcore:us-east-1:...
+Provider ARN: arn:aws:bedrock-agentcore:ap-southeast-2:...
 ```
 
 ### 3. Deploy to AgentCore

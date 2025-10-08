@@ -350,7 +350,7 @@ class Config:
 
     def _get_from_secrets_manager(self) -> Dict[str, str]:
         """Fetch credentials from AWS Secrets Manager (production)"""
-        client = boto3.client('secretsmanager', region_name='us-east-1')
+        client = boto3.client('secretsmanager', region_name='ap-southeast-2')
         secret_name = "github-agent/credentials"
 
         try:
@@ -400,8 +400,8 @@ uv run github-agent invoke "show my repos"
 uv run poe build
 
 # Tag and push to ECR
-docker tag github-agent:latest <account>.dkr.ecr.us-east-1.amazonaws.com/github-agent:latest
-docker push <account>.dkr.ecr.us-east-1.amazonaws.com/github-agent:latest
+docker tag github-agent:latest <account>.dkr.ecr.ap-southeast-2.amazonaws.com/github-agent:latest
+docker push <account>.dkr.ecr.ap-southeast-2.amazonaws.com/github-agent:latest
 
 # Deploy to AgentCore Runtime (using AWS CLI or SDK)
 aws bedrock-agentcore create-agent \

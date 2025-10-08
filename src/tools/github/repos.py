@@ -6,6 +6,7 @@ from the auth module.
 
 import httpx
 from strands import tool
+from bedrock_agentcore.identity.auth import requires_access_token
 import sys
 from pathlib import Path
 
@@ -14,24 +15,21 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 @tool
-def list_github_repos() -> str:
+@requires_access_token(
+    provider_name="github-provider",
+    scopes=["repo", "read:user"],
+    auth_flow='USER_FEDERATION',
+)
+async def list_github_repos(*, access_token: str) -> str:
     """List user's private GitHub repositories.
 
     Returns:
         Formatted string with repository information
     """
-    # Import token fresh each time to get the updated value
-    from common.auth import github
-
-    if not github.github_access_token:
-        return """❌ GitHub authentication required.
-
-The agent needs authorization to access your GitHub repositories.
-Please complete the OAuth flow when prompted."""
-
     print(f"🔍 Fetching GitHub repositories...")
+    print(f"🔑 Access token received: {access_token[:20]}..." if access_token else "❌ No access token!")
 
-    headers = {"Authorization": f"Bearer {github.github_access_token}"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
         with httpx.Client() as client:
@@ -83,7 +81,12 @@ Please complete the OAuth flow when prompted."""
 
 
 @tool
-def get_repo_info(repo_name: str) -> str:
+@requires_access_token(
+    provider_name="github-provider",
+    scopes=["repo", "read:user"],
+    auth_flow='USER_FEDERATION',
+)
+async def get_repo_info(repo_name: str, *, access_token: str) -> str:
     """Get detailed information about a specific repository.
 
     Args:
@@ -92,12 +95,7 @@ def get_repo_info(repo_name: str) -> str:
     Returns:
         Detailed repository information
     """
-    from common.auth import github
-
-    if not github.github_access_token:
-        return "❌ GitHub authentication required."
-
-    headers = {"Authorization": f"Bearer {github.github_access_token}"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
         with httpx.Client() as client:
@@ -156,10 +154,17 @@ URL: {repo['html_url']}
 
 
 @tool
-def create_github_repo(
+@requires_access_token(
+    provider_name="github-provider",
+    scopes=["repo", "read:user"],
+    auth_flow='USER_FEDERATION',
+)
+async def create_github_repo(
     name: str,
     description: str = "",
-    private: bool = False
+    private: bool = False,
+    *,
+    access_token: str
 ) -> str:
     """Create a new GitHub repository.
 
@@ -171,12 +176,7 @@ def create_github_repo(
     Returns:
         Success message with repository details
     """
-    from common.auth import github
-
-    if not github.github_access_token:
-        return "❌ GitHub authentication required."
-
-    headers = {"Authorization": f"Bearer {github.github_access_token}"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
         with httpx.Client() as client:
