@@ -51,10 +51,12 @@ deploy-github = { shell = "cp Dockerfile.github Dockerfile && agentcore launch -
 deploy-planning = { shell = "cp Dockerfile.planning Dockerfile && agentcore launch -a planning_agent" }
 deploy-jira = { shell = "cp Dockerfile.jira Dockerfile && agentcore launch -a jira_agent" }
 deploy-coding = { shell = "cp Dockerfile.coding Dockerfile && agentcore launch -a coding_agent" }
+deploy-orchestrator = { shell = "cp Dockerfile.orchestrator Dockerfile && agentcore launch -a orchestrator_agent" }
 invoke-github = "agentcore invoke -a github_agent"  # Usage: poe invoke-github '{"prompt": "..."}' --user-id "test"
 invoke-planning = "agentcore invoke -a planning_agent"  # Usage: poe invoke-planning '{"prompt": "..."}' --user-id "test"
 invoke-jira = "agentcore invoke -a jira_agent"  # Usage: poe invoke-jira '{"prompt": "..."}' --user-id "test"
 invoke-coding = "agentcore invoke -a coding_agent"  # Usage: poe invoke-coding '{"prompt": "..."}' --user-id "test"
+invoke-orchestrator = "agentcore invoke -a orchestrator_agent"  # Usage: poe invoke-orchestrator '{"prompt": "..."}' --user-id "test"
 
 # Development
 sync = "uv sync"
