@@ -34,8 +34,8 @@ aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent
 # GitHub OAuth (required for GitHub agent)
 python setup_github_provider.py
 
-# JIRA (optional - can use environment variables)
-# See docs/JIRA-Agent-Setup.md
+# JIRA OAuth (optional - can use environment variables for testing)
+python setup_jira_provider.py
 ```
 
 ## Deployment Commands
@@ -216,9 +216,15 @@ export GITHUB_CLIENT_SECRET="your_github_oauth_client_secret"
 
 ### Required for JIRA Agent
 ```bash
+# For development/testing (API Token)
 export JIRA_URL="https://your-domain.atlassian.net"
 export JIRA_EMAIL="your-email@company.com"
 export JIRA_API_TOKEN="your_jira_api_token"
+
+# For production (Atlassian OAuth 2.0)
+export ATLASSIAN_CLIENT_ID="your_atlassian_client_id"
+export ATLASSIAN_CLIENT_SECRET="your_atlassian_client_secret"
+export JIRA_URL="https://your-domain.atlassian.net"
 ```
 
 ### AWS Configuration

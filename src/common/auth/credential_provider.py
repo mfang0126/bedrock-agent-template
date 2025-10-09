@@ -61,6 +61,51 @@ class CredentialProviderManager:
         print(f"   ARN: {response['credentialProviderArn']}")
         return response
 
+    def create_atlassian_provider(
+        self,
+        name: str,
+        client_id: str,
+        client_secret: str
+    ) -> Dict:
+        """Create Atlassian OAuth2 credential provider for JIRA.
+
+        Args:
+            name: Provider name (e.g., 'jira-provider')
+            client_id: Atlassian OAuth App client ID
+            client_secret: Atlassian OAuth App client secret
+
+        Returns:
+            Provider creation response with ARN
+
+        Example:
+            >>> manager = CredentialProviderManager()
+            >>> provider = manager.create_atlassian_provider(
+            ...     name='jira-provider',
+            ...     client_id='abc123...',
+            ...     client_secret='xyz789...'
+            ... )
+            >>> print(provider['credentialProviderArn'])
+
+        Note:
+            The vendor name 'AtlassianOauth2' may need verification.
+            Check supported vendors with:
+            aws bedrock-agentcore-control list-oauth2-credential-provider-vendors
+        """
+        response = self.client.create_oauth2_credential_provider(
+            name=name,
+            credentialProviderVendor='AtlassianOauth2',  # May need verification
+            oauth2ProviderConfigInput={
+                'atlassianOauth2ProviderConfig': {
+                    'clientId': client_id,
+                    'clientSecret': client_secret
+                }
+            }
+        )
+
+        print(f"✅ Atlassian credential provider created")
+        print(f"   ARN: {response['credentialProviderArn']}")
+        return response
+
     def list_providers(self) -> list:
         """List all credential providers.
 

@@ -39,8 +39,9 @@ aws ecr create-repository --repository-name bedrock-agentcore-jira_agent --regio
 aws ecr create-repository --repository-name bedrock-agentcore-coding_agent --region $AWS_REGION
 aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent --region $AWS_REGION
 
-# 6. Setup GitHub OAuth provider (for GitHub agent)
-python setup_github_provider.py
+# 6. Setup OAuth providers
+python setup_github_provider.py  # For GitHub agent
+python setup_jira_provider.py    # For JIRA agent (optional - can use API token)
 
 # 7. Deploy all agents
 uv run poe deploy-github

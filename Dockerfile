@@ -1,44 +1,34 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# Multi-agent platform Dockerfile - Coding Agent
+# Based on proven GitHub Agent template
+
+FROM public.ecr.aws/docker/library/python:3.12-slim
+
+# Set working directory
 WORKDIR /app
 
-# All environment variables in one layer
-ENV UV_SYSTEM_PYTHON=1 \
-    UV_COMPILE_BYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DOCKER_CONTAINER=1 \
-    AWS_REGION=ap-southeast-2 \
-    AWS_DEFAULT_REGION=ap-southeast-2
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy dependency files
+COPY pyproject.toml README.md ./
 
+# Install Python dependencies
+# Use --no-cache-dir to reduce image size
+RUN pip install --no-cache-dir -e ".[strands-agents]"
 
+# Install OpenTelemetry for instrumentation
+RUN pip install --no-cache-dir opentelemetry-distro opentelemetry-exporter-otlp
+RUN opentelemetry-bootstrap -a install
+
+# Copy project files
+# .dockerignore controls what gets copied
 COPY . .
-# Install from pyproject.toml directory
-RUN cd . && uv pip install .
 
-
-
-
-RUN uv pip install aws-opentelemetry-distro>=0.10.1
-
-
-# Set AWS region environment variable
-
-ENV AWS_REGION=ap-southeast-2
-ENV AWS_DEFAULT_REGION=ap-southeast-2
-
-
-# Signal that this is running in Docker for host binding logic
-ENV DOCKER_CONTAINER=1
-
-# Create non-root user
-RUN useradd -m -u 1000 bedrock_agentcore
-USER bedrock_agentcore
-
-EXPOSE 8080
+# Expose port for AgentCore
 EXPOSE 8000
 
-# Copy entire project (respecting .dockerignore)
-COPY . .
-
-# Planning Agent specific entrypoint
-CMD ["opentelemetry-instrument", "python", "-m", "src.agents.planning_agent.runtime"]
+# Coding Agent specific entrypoint
+CMD ["opentelemetry-instrument", "python", "-m", "src.agents.coding_agent.runtime"]

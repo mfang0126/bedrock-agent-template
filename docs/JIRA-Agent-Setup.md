@@ -102,35 +102,51 @@ Link GitHub issue/PR to JIRA ticket.
 
 ## Authentication
 
+The JIRA Agent supports two authentication modes:
+
 ### Development (Environment Variables)
 For local testing, use environment variables:
 ```bash
+export JIRA_URL="https://your-domain.atlassian.net"
+export JIRA_EMAIL="your-email@company.com"
 export JIRA_API_TOKEN="your_token"
 ```
 
-### Production (AgentCore Identity)
-Set up a JIRA credential provider in AgentCore Identity:
+Get JIRA API token from: https://id.atlassian.com/manage-profile/security/api-tokens
 
+### Production (Atlassian OAuth 2.0)
+For enterprise deployments, use Atlassian OAuth 2.0 for per-user authentication.
+
+**Step 1: Create Atlassian OAuth 2.0 App**
+1. Go to https://developer.atlassian.com/console/myapps/
+2. Create a new OAuth 2.0 (3LO) app
+3. Configure OAuth settings:
+   - Callback URL: (will be provided by AgentCore after provider creation)
+   - Permissions/Scopes: `read:jira-work`, `write:jira-work`
+
+**Step 2: Add Credentials to .env**
 ```bash
-# Create JIRA provider (similar to GitHub provider)
-aws bedrock-agentcore create-credential-provider \
-  --name jira-provider \
-  --type API_TOKEN \
-  --config '{
-    "api_endpoint": "https://your-domain.atlassian.net",
-    "auth_type": "basic",
-    "email_field": "JIRA_EMAIL",
-    "token_field": "JIRA_API_TOKEN"
-  }'
+# Add to .env file
+ATLASSIAN_CLIENT_ID=your_client_id
+ATLASSIAN_CLIENT_SECRET=your_client_secret
+JIRA_URL=https://your-domain.atlassian.net
 ```
 
-Then add to agent configuration:
-```yaml
-oauth_configuration:
-  workload_name: jira-agent-workload
-  credential_providers:
-  - jira-provider
+**Step 3: Create Credential Provider**
+```bash
+# Run the setup script
+python setup_jira_provider.py
 ```
+
+This will:
+- Create `jira-provider` in AgentCore Identity
+- Store OAuth credentials securely
+- Provide the callback URL for your Atlassian app
+
+**Step 4: Update Atlassian App with Callback URL**
+After running the setup script, add the provided callback URL to your Atlassian OAuth app settings.
+
+**Note:** Each user will need to authorize the Atlassian app on first use. Tokens are stored securely per-user in AgentCore Identity.
 
 ## Troubleshooting
 

@@ -79,6 +79,29 @@ class Config:
             print(f"❌ Error fetching secrets from AWS Secrets Manager: {e}")
             raise
 
+    def get_atlassian_credentials(self) -> Dict[str, str]:
+        """Get Atlassian OAuth credentials from environment.
+
+        Returns:
+            Dict with client_id and client_secret
+
+        Raises:
+            ValueError: If credentials not found
+        """
+        client_id = os.getenv("ATLASSIAN_CLIENT_ID")
+        client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
+
+        if not client_id or not client_secret:
+            raise ValueError(
+                "ATLASSIAN_CLIENT_ID and ATLASSIAN_CLIENT_SECRET environment variables required. "
+                "Create an Atlassian OAuth 2.0 app at: https://developer.atlassian.com/console/myapps/"
+            )
+
+        return {
+            "client_id": client_id,
+            "client_secret": client_secret
+        }
+
     def get_aws_region(self) -> str:
         """Get AWS region."""
         return os.getenv("AWS_REGION", "ap-southeast-2")
