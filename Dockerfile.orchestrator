@@ -30,5 +30,12 @@ COPY . .
 # Expose port for AgentCore
 EXPOSE 8000
 
+# Set environment variables for sub-agent ARNs
+ENV AWS_REGION=ap-southeast-2
+ENV GITHUB_AGENT_ARN=arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/runtime-08tk23FYi7
+ENV PLANNING_AGENT_ARN=arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/planning_agent-HOo1EJ7KvE
+ENV JIRA_AGENT_ARN=arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/jira_agent-WboCCb8qfb
+ENV CODING_AGENT_ARN=arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/coding_agent-sQJDwfGL8y
+
 # Orchestrator Agent specific entrypoint
 CMD ["opentelemetry-instrument", "python", "-m", "src.agents.orchestrator_agent.runtime"]

@@ -5,15 +5,23 @@ Coordinates multiple specialized agents to execute end-to-end workflows.
 Parses user requests, determines workflow sequence, and coordinates agent execution.
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
 from strands.models import BedrockModel
-from src.tools.orchestrator import (
-    parse_user_request,
-    determine_workflow,
-    execute_workflow_sequence,
+from src.tools.orchestrator.parser import parse_user_request
+from src.tools.orchestrator.coordinator import determine_workflow
+from src.tools.orchestrator.multi_agent_tools import (
+    invoke_github_agent,
+    invoke_planning_agent,
+    execute_multi_agent_workflow,
+    check_agent_status,
 )
-
 
 app = BedrockAgentCoreApp()
 
@@ -104,7 +112,10 @@ agent = Agent(
     tools=[
         parse_user_request,
         determine_workflow,
-        execute_workflow_sequence,
+        check_agent_status,
+        invoke_github_agent,
+        invoke_planning_agent,
+        execute_multi_agent_workflow,
     ],
     system_prompt=SYSTEM_PROMPT,
 )

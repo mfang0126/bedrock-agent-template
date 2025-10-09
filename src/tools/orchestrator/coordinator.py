@@ -7,7 +7,7 @@ Executes workflows by coordinating multiple agents.
 import json
 import os
 from typing import Dict, List, Optional
-from strands.tools import tool
+from strands import tool
 
 
 # Agent ARN mappings (loaded from environment or config)

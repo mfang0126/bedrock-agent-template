@@ -6,7 +6,7 @@ Extracts key information from user requests to determine workflow.
 
 import re
 from typing import Dict
-from strands.tools import tool
+from strands import tool
 
 
 @tool
