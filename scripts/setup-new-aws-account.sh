@@ -60,6 +60,8 @@ echo ""
 # Step 2: Configure all agents
 echo "⚙️  Step 2: Configuring agents with AgentCore..."
 echo "----------------------------------------"
+echo "This creates .bedrock_agentcore.yaml (gitignored, required for deployment)"
+echo ""
 
 AGENTS=(
     "src/agents/github_agent/runtime.py"

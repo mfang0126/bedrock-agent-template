@@ -27,10 +27,12 @@ aws_use mingfang
 **What it does:**
 1. ✅ Verifies AWS credentials and prerequisites
 2. 📦 Installs all Python dependencies (`uv sync --all-extras`)
-3. ⚙️ Configures all 5 agents with AgentCore CLI
+3. ⚙️ Configures all 5 agents with AgentCore CLI (creates `.bedrock_agentcore.yaml`)
 4. 🐳 Creates ECR repositories for all agents
 5. 🔐 Sets up OAuth providers (GitHub and JIRA)
 6. 🚀 Deploys all agents to AWS (optional)
+
+**Note:** `.bedrock_agentcore.yaml` is gitignored, so Step 3 is required for new clones.
 
 **Environment Setup:**
 - Creates `.env` from `.env.example` if not exists
