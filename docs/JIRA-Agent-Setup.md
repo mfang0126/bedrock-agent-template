@@ -102,20 +102,7 @@ Link GitHub issue/PR to JIRA ticket.
 
 ## Authentication
 
-The JIRA Agent supports two authentication modes:
-
-### Development (Environment Variables)
-For local testing, use environment variables:
-```bash
-export JIRA_URL="https://your-domain.atlassian.net"
-export JIRA_EMAIL="your-email@company.com"
-export JIRA_API_TOKEN="your_token"
-```
-
-Get JIRA API token from: https://id.atlassian.com/manage-profile/security/api-tokens
-
-### Production (Atlassian OAuth 2.0)
-For enterprise deployments, use Atlassian OAuth 2.0 for per-user authentication.
+The JIRA Agent uses **Atlassian OAuth 2.0** exclusively for per-user authentication.
 
 **Step 1: Create Atlassian OAuth 2.0 App**
 1. Go to https://developer.atlassian.com/console/myapps/

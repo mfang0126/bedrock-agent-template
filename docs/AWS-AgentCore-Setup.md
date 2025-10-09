@@ -60,16 +60,12 @@ uv run poe invoke-planning '{"prompt": "Hello"}' --user-id "test"
 
 ## Step 1: AWS Account Setup
 
-### 1.1 Choose AWS Region
+### 1.1 Set AWS Region
 
-AgentCore is available in these regions:
-- `us-east-1` (US East - N. Virginia)
-- `us-west-2` (US West - Oregon)
-- `ap-southeast-2` (Asia Pacific - Sydney)
-- `eu-central-1` (Europe - Frankfurt)
+This repository is configured for Sydney region:
 
 ```bash
-# Set your preferred region
+# Set region to Sydney
 export AWS_REGION=ap-southeast-2
 ```
 

@@ -216,12 +216,7 @@ export GITHUB_CLIENT_SECRET="your_github_oauth_client_secret"
 
 ### Required for JIRA Agent
 ```bash
-# For development/testing (API Token)
-export JIRA_URL="https://your-domain.atlassian.net"
-export JIRA_EMAIL="your-email@company.com"
-export JIRA_API_TOKEN="your_jira_api_token"
-
-# For production (Atlassian OAuth 2.0)
+# Atlassian OAuth 2.0 (required)
 export ATLASSIAN_CLIENT_ID="your_atlassian_client_id"
 export ATLASSIAN_CLIENT_SECRET="your_atlassian_client_secret"
 export JIRA_URL="https://your-domain.atlassian.net"
@@ -229,7 +224,7 @@ export JIRA_URL="https://your-domain.atlassian.net"
 
 ### AWS Configuration
 ```bash
-export AWS_REGION="ap-southeast-2"  # or us-east-1, us-west-2, eu-central-1
+export AWS_REGION="ap-southeast-2"  # Sydney region
 ```
 
 ## Troubleshooting Commands
