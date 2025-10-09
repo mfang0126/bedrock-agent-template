@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: jira_agent-WboCCb8qfb
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/jira_agent-WboCCb8qfb
-      agent_session_id: null
+      agent_session_id: 12171e11-d892-4be7-a406-aeb7aacff6bb
     codebuild:
       project_name: bedrock-agentcore-jira_agent-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
