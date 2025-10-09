@@ -1,0 +1,47 @@
+Poe the Poet (version 0.37.0)
+
+Error: Unrecognized task '='
+
+Usage:
+  poe [global options] task [task arguments]
+
+Global options:
+  -h [TASK], --help [TASK]
+                        Show this help page and exit, optionally supply a
+                        task.
+  --version             Print the version and exit
+  -v, --verbose         Increase output (repeatable)
+  -q, --quiet           Decrease output (repeatable)
+  -d, --dry-run         Print the task contents but don't actually run it
+  -C PATH, --directory PATH
+                        Specify where to find the pyproject.toml
+  -e EXECUTOR, --executor EXECUTOR
+                        Override the default task executor
+  --ansi                Force enable ANSI output
+  --no-ansi             Force disable ANSI output
+
+Configured tasks:
+  github                
+  github-auth           
+  github-invoke         
+  github-tools          
+  planning              
+  test                  
+  test-github           
+  test-planning         
+  test-agent            
+  deploy-github         
+  deploy-planning       
+  deploy-jira           
+  deploy-coding         
+  deploy-orchestrator   
+  invoke-github         
+  invoke-planning       
+  invoke-jira           
+  invoke-coding         
+  invoke-orchestrator   
+  sync                  
+  sync-dev              
+  aws-follow            
+
+

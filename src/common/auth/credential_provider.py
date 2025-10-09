@@ -67,7 +67,7 @@ class CredentialProviderManager:
         client_id: str,
         client_secret: str
     ) -> Dict:
-        """Create Atlassian OAuth2 credential provider for JIRA.
+        """Create Atlassian OAuth2 credential provider for JIRA using custom OAuth.
 
         Args:
             name: Provider name (e.g., 'jira-provider')
@@ -87,15 +87,17 @@ class CredentialProviderManager:
             >>> print(provider['credentialProviderArn'])
 
         Note:
-            The vendor name 'AtlassianOauth2' may need verification.
-            Check supported vendors with:
-            aws bedrock-agentcore-control list-oauth2-credential-provider-vendors
+            Uses customOauth2ProviderConfig since Atlassian is not a native provider.
+            Supported native providers: GitHub, Google, Slack, Salesforce, Microsoft.
         """
         response = self.client.create_oauth2_credential_provider(
             name=name,
-            credentialProviderVendor='AtlassianOauth2',  # May need verification
+            credentialProviderVendor='CustomOauth2',
             oauth2ProviderConfigInput={
-                'atlassianOauth2ProviderConfig': {
+                'customOauth2ProviderConfig': {
+                    'oauthDiscovery': {
+                        'discoveryUrl': 'https://auth.atlassian.com/.well-known/openid-configuration'
+                    },
                     'clientId': client_id,
                     'clientSecret': client_secret
                 }
