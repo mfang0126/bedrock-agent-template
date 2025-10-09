@@ -6,11 +6,11 @@ agents:
     platform: linux/arm64
     container_runtime: docker
     aws:
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-423614833c
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-423614833c
       execution_role_auto_create: false
-      account: '670326884047'
+      account: '494848961867'
       region: ap-southeast-2
-      ecr_repository: 670326884047.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-planning
+      ecr_repository: 494848961867.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-planning
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC
@@ -19,21 +19,20 @@ agents:
       observability:
         enabled: false
     bedrock_agentcore:
-      agent_id: planning-jDw1hm2ip6
-      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/planning-jDw1hm2ip6
-      agent_session_id: 98abc54b-9f0e-4cbf-8534-0977322fd980
+      agent_id: planning-hp7R5F5PJ8
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:runtime/planning-hp7R5F5PJ8
+      agent_session_id: bef09afd-a6be-40cd-bd3a-32cc23d9c354
     codebuild:
       project_name: bedrock-agentcore-planning-builder
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-423614833c
-      source_bucket: bedrock-agentcore-codebuild-sources-670326884047-ap-southeast-2
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-423614833c
+      source_bucket: bedrock-agentcore-codebuild-sources-494848961867-ap-southeast-2
     memory:
-      mode: STM_ONLY
-      memory_id: planning_mem-qrcXY02YXi
-      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:memory/planning_mem-qrcXY02YXi
-      memory_name: planning_mem
+      mode: STM_AND_LTM
+      memory_id: github_mem-cq7n1YBMRV
+      memory_arn: null
+      memory_name: planning_memory
       event_expiry_days: 30
-      first_invoke_memory_check_done: false
+      first_invoke_memory_check_done: true
     authorizer_configuration: null
     request_header_configuration: null
-    oauth_configuration:
-      workload_name: workload-6bb1e891
+    oauth_configuration: null

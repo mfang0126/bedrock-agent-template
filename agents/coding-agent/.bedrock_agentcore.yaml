@@ -1,16 +1,16 @@
-default_agent: codingagent
+default_agent: planning
 agents:
-  codingagent:
-    name: codingagent
+  planning:
+    name: planning
     entrypoint: src/runtime.py
     platform: linux/arm64
     container_runtime: docker
     aws:
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-cc928dc9c6
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-423614833c
       execution_role_auto_create: false
-      account: '670326884047'
+      account: '494848961867'
       region: ap-southeast-2
-      ecr_repository: 670326884047.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-coding-agent
+      ecr_repository: 494848961867.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-planning
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC
@@ -19,18 +19,18 @@ agents:
       observability:
         enabled: false
     bedrock_agentcore:
-      agent_id: codingagent-lE7IQU3dK8
-      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/codingagent-lE7IQU3dK8
-      agent_session_id: 5048a64e-c9a3-4fdd-a30a-4b4221473d85
+      agent_id: planning-hp7R5F5PJ8
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:runtime/planning-hp7R5F5PJ8
+      agent_session_id: bdab5cd8-9255-4971-bb92-ece8dc741fe9
     codebuild:
-      project_name: bedrock-agentcore-codingagent-builder
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-3e99a3f99b
-      source_bucket: bedrock-agentcore-codebuild-sources-670326884047-ap-southeast-2
+      project_name: bedrock-agentcore-planning-builder
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-423614833c
+      source_bucket: bedrock-agentcore-codebuild-sources-494848961867-ap-southeast-2
     memory:
       mode: STM_ONLY
-      memory_id: codingagent_mem-5s8o4OA2la
-      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:memory/codingagent_mem-5s8o4OA2la
-      memory_name: codingagent_mem
+      memory_id: planning_mem-SEIn8G5zMi
+      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:memory/planning_mem-SEIn8G5zMi
+      memory_name: planning_mem
       event_expiry_days: 30
       first_invoke_memory_check_done: false
     authorizer_configuration: null

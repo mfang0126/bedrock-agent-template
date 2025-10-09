@@ -7,7 +7,9 @@ ENV UV_SYSTEM_PYTHON=1 \
     PYTHONUNBUFFERED=1 \
     DOCKER_CONTAINER=1 \
     AWS_REGION=ap-southeast-2 \
-    AWS_DEFAULT_REGION=ap-southeast-2
+    AWS_DEFAULT_REGION=ap-southeast-2 \
+    BEDROCK_AGENTCORE_MEMORY_ID=github_mem-Plzy795GSZ \
+    BEDROCK_AGENTCORE_MEMORY_NAME=github_mem
 
 
 

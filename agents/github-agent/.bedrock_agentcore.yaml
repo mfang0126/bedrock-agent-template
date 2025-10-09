@@ -6,11 +6,11 @@ agents:
     platform: linux/arm64
     container_runtime: docker
     aws:
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-c0b0109d94
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-c0b0109d94
       execution_role_auto_create: false
-      account: '670326884047'
+      account: '494848961867'
       region: ap-southeast-2
-      ecr_repository: 670326884047.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-github
+      ecr_repository: 494848961867.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-github
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC
@@ -19,20 +19,20 @@ agents:
       observability:
         enabled: false
     bedrock_agentcore:
-      agent_id: github-Hn7UKwBMRj
-      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/github-Hn7UKwBMRj
-      agent_session_id: e128864e-44bb-44e4-b4c2-c8563cff181c
+      agent_id: github-J7dn2UBTj7
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:runtime/github-J7dn2UBTj7
+      agent_session_id: d967aebf-b2b0-478e-9bc8-6017155f954c
     codebuild:
       project_name: bedrock-agentcore-github-builder
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
-      source_bucket: bedrock-agentcore-codebuild-sources-670326884047-ap-southeast-2
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
+      source_bucket: bedrock-agentcore-codebuild-sources-494848961867-ap-southeast-2
     memory:
-      mode: STM_ONLY
-      memory_id: github_mem-Plzy795GSZ
-      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:memory/github_mem-Plzy795GSZ
-      memory_name: github_mem
+      mode: STM_AND_LTM
+      memory_id: github_mem-cq7n1YBMRV
+      memory_arn: null
+      memory_name: github_memory
       event_expiry_days: 30
-      first_invoke_memory_check_done: false
+      first_invoke_memory_check_done: true
     authorizer_configuration: null
     request_header_configuration: null
     oauth_configuration:

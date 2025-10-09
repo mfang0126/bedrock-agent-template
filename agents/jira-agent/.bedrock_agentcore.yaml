@@ -6,11 +6,11 @@ agents:
     platform: linux/arm64
     container_runtime: docker
     aws:
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-c0b0109d94
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-1e32847769
       execution_role_auto_create: false
-      account: '670326884047'
+      account: '494848961867'
       region: ap-southeast-2
-      ecr_repository: 670326884047.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-jira_agent
+      ecr_repository: 494848961867.dkr.ecr.ap-southeast-2.amazonaws.com/bedrock-agentcore-jira
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC
@@ -19,17 +19,17 @@ agents:
       observability:
         enabled: false
     bedrock_agentcore:
-      agent_id: jira_agent-WboCCb8qfb
-      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/jira_agent-WboCCb8qfb
-      agent_session_id: 4237f510-5de6-48c2-b826-fbb6ee31955d
+      agent_id: jira-uXJfIz5KMP
+      agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:runtime/jira-uXJfIz5KMP
+      agent_session_id: 4b2411c0-4734-41bc-abdd-4c1a0fb2bc26
     codebuild:
-      project_name: bedrock-agentcore-jira_agent-builder
-      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
-      source_bucket: bedrock-agentcore-codebuild-sources-670326884047-ap-southeast-2
+      project_name: bedrock-agentcore-jira-builder
+      execution_role: arn:aws:iam::494848961867:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-1e32847769
+      source_bucket: bedrock-agentcore-codebuild-sources-494848961867-ap-southeast-2
     memory:
       mode: STM_ONLY
-      memory_id: jira_mem-placeholder
-      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:memory/jira_mem-placeholder
+      memory_id: jira_mem-HQXT0vCEhC
+      memory_arn: arn:aws:bedrock-agentcore:ap-southeast-2:494848961867:memory/jira_mem-HQXT0vCEhC
       memory_name: jira_mem
       event_expiry_days: 30
       first_invoke_memory_check_done: false

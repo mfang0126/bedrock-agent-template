@@ -7,16 +7,23 @@ ENV UV_SYSTEM_PYTHON=1 \
     PYTHONUNBUFFERED=1 \
     DOCKER_CONTAINER=1 \
     AWS_REGION=ap-southeast-2 \
-    AWS_DEFAULT_REGION=ap-southeast-2 \
-    JIRA_URL=https://kookaburra.atlassian.net
+    AWS_DEFAULT_REGION=ap-southeast-2
+
+
 
 COPY . .
 # Install from pyproject.toml directory
 RUN cd . && uv pip install .
 
+
+
+
+
 # Set AWS region environment variable
+
 ENV AWS_REGION=ap-southeast-2
 ENV AWS_DEFAULT_REGION=ap-southeast-2
+
 
 # Signal that this is running in Docker for host binding logic
 ENV DOCKER_CONTAINER=1
@@ -33,4 +40,5 @@ EXPOSE 8080
 COPY . .
 
 # Use the full module path
+
 CMD ["python", "-m", "src.runtime"]
