@@ -24,8 +24,8 @@ async def fetch_jira_ticket(ticket_id: str) -> str:
         return f"❌ Invalid ticket ID format. Expected: PROJECT-123, got: {ticket_id}"
 
     try:
-        # Get authentication
-        headers = await get_jira_auth_headers()
+        # Get authentication headers (token set by runtime)
+        headers = get_jira_auth_headers()
         jira_url = get_jira_url_cached()
 
         # Fetch ticket from JIRA API

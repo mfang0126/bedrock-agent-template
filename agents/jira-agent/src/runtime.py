@@ -109,6 +109,7 @@ async def strands_agent_jira(payload):
 
     Handles JIRA ticket operations with OAuth 2.0 authentication.
     """
+    from src.common import auth as jira_auth
     from src.common.utils import (
         clean_json_response,
         create_error_response,
@@ -126,6 +127,20 @@ async def strands_agent_jira(payload):
         if not user_input:
             logger.info("Empty input received, returning greeting message")
             yield format_client_text("Hello! I'm the JIRA Agent. Please provide a request related to JIRA tickets.")
+            return
+
+        # Initialize JIRA OAuth - get token once at start
+        logger.info("🔐 Initializing JIRA authentication...")
+        yield format_client_text("🔐 Initializing JIRA authentication...")
+
+        try:
+            await jira_auth.get_jira_access_token()
+            logger.info("✅ JIRA authentication successful")
+            yield format_client_text("✅ JIRA authentication successful")
+        except Exception as e:
+            error_msg = f"❌ JIRA authentication failed: {str(e)}"
+            logger.error(error_msg)
+            yield format_client_text(error_msg)
             return
 
         logger.info(f"📥 Processing JIRA request: {user_input}")

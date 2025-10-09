@@ -28,7 +28,7 @@ async def update_jira_status(ticket_id: str, status: str) -> str:
         return "❌ Status cannot be empty"
 
     try:
-        headers = await get_jira_auth_headers()
+        headers = get_jira_auth_headers()
         jira_url = get_jira_url_cached()
 
         async with httpx.AsyncClient() as client:
@@ -96,7 +96,7 @@ async def add_jira_comment(ticket_id: str, comment: str, github_url: str = None)
         return "❌ Comment cannot be empty"
 
     try:
-        headers = await get_jira_auth_headers()
+        headers = get_jira_auth_headers()
         jira_url = get_jira_url_cached()
 
         # Format comment with GitHub link if provided
@@ -162,7 +162,7 @@ async def link_github_issue(ticket_id: str, github_url: str) -> str:
         return "❌ Invalid GitHub URL"
 
     try:
-        headers = await get_jira_auth_headers()
+        headers = get_jira_auth_headers()
         jira_url = get_jira_url_cached()
 
         # Extract issue/PR number from URL

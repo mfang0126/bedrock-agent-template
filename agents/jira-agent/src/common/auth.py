@@ -53,43 +53,35 @@ async def get_jira_access_token(*, access_token: str) -> str:
     Returns:
         Access token string
     """
-    global _jira_access_token
+    global _jira_access_token, _jira_url
     _jira_access_token = access_token
+    _jira_url = get_jira_url()  # Cache JIRA URL at token initialization
     print(f"✅ JIRA access token received")
     print(f"   Token: {access_token[:20]}...")
     return access_token
 
 
-async def get_jira_auth_headers() -> Dict[str, str]:
-    """Get JIRA authentication headers using AgentCore Identity OAuth 2.0.
+def get_jira_auth_headers() -> Dict[str, str]:
+    """Get JIRA authentication headers from cached token.
 
     Returns:
         HTTP headers with OAuth Bearer token
 
     Raises:
-        Exception: If OAuth authentication fails
+        Exception: If no token available
     """
-    global _jira_headers, _jira_url, _jira_access_token
+    global _jira_access_token
 
-    if _jira_headers:
-        return _jira_headers
-
-    # Get JIRA URL
-    _jira_url = get_jira_url()
-
-    # Get OAuth token via decorator
     if not _jira_access_token:
-        print("🔄 Retrieving JIRA access token...")
-        await get_jira_access_token()
+        raise Exception(
+            "❌ JIRA token not initialized. Authentication must be called first."
+        )
 
-    print("✅ Using JIRA OAuth token from AgentCore Identity")
-
-    _jira_headers = {
+    return {
         "Authorization": f"Bearer {_jira_access_token}",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    return _jira_headers
 
 
 def get_jira_url_cached() -> str:
