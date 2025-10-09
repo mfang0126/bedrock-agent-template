@@ -10,40 +10,46 @@ import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
-from strands import Agent
+from strands import Agent, tool
 from strands.models import BedrockModel
 
 # Import tools
-from .tools.coding.workspace_manager import WorkspaceManager
-from .tools.coding.file_operations import FileOperations
-from .tools.coding.command_executor import CommandExecutor
-from .tools.coding.test_runner import TestRunner
+from tools.workspace_manager import WorkspaceManager
+from tools.file_operations import FileOperations
+from tools.command_executor import CommandExecutor
+from tools.test_runner import TestRunner
 
 logger = logging.getLogger(__name__)
 
 
+@tool
 def create_workspace(project_name: str, project_type: str = "python", template_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Create a new coding workspace with project template.
-    
+
     Args:
         project_name: Name of the project
         project_type: Type of project (python, javascript, java, etc.)
         template_config: Optional template configuration
-        
+
     Returns:
         Dict containing workspace creation results
     """
     workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
     workspace_manager = WorkspaceManager(workspace_root)
-    
+
     try:
-        result = workspace_manager.create_workspace(project_name, project_type, template_config or {})
+        # Call with correct parameters: workspace_id, template, config
+        result = workspace_manager.create_workspace(
+            workspace_id=project_name,
+            template=project_type,
+            config=template_config or {}
+        )
         return {
             "success": True,
-            "workspace_path": result["workspace_path"],
+            "workspace_path": result["path"],  # Fixed: use 'path' not 'workspace_path'
             "project_type": project_type,
-            "files_created": result.get("files_created", []),
-            "message": f"Created {project_type} workspace: {project_name}"
+            "files_created": [],
+            "message": f"Created {project_type} workspace: {project_name} at {result['path']}"
         }
     except Exception as e:
         logger.error(f"Failed to create workspace {project_name}: {e}")
@@ -54,6 +60,7 @@ def create_workspace(project_name: str, project_type: str = "python", template_c
         }
 
 
+@tool
 def setup_workspace(workspace_path: str, dependencies: Optional[Any] = None) -> Dict[str, Any]:
     """Setup workspace by cloning code and running Node install/audit commands.
     
@@ -107,6 +114,7 @@ def setup_workspace(workspace_path: str, dependencies: Optional[Any] = None) -> 
         }
 
 
+@tool
 def read_file(file_path: str, encoding: str = "utf-8") -> Dict[str, Any]:
     """Read file content safely within workspace.
     
@@ -145,6 +153,7 @@ def read_file(file_path: str, encoding: str = "utf-8") -> Dict[str, Any]:
         }
 
 
+@tool
 def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dirs: bool = True) -> Dict[str, Any]:
     """Write content to file safely within workspace.
     
@@ -185,6 +194,7 @@ def write_file(file_path: str, content: str, encoding: str = "utf-8", create_dir
         }
 
 
+@tool
 def modify_file(file_path: str, search_pattern: str, replacement: str, use_regex: bool = False) -> Dict[str, Any]:
     """Modify file content by replacing patterns.
     
@@ -217,6 +227,7 @@ def modify_file(file_path: str, search_pattern: str, replacement: str, use_regex
         }
 
 
+@tool
 def list_files(directory: str = "", pattern: str = "*", recursive: bool = False) -> Dict[str, Any]:
     """List files in directory with optional pattern matching.
     
@@ -249,6 +260,7 @@ def list_files(directory: str = "", pattern: str = "*", recursive: bool = False)
         }
 
 
+@tool
 def execute_command(command: str, timeout: int = 30, capture_output: bool = True) -> Dict[str, Any]:
     """Execute command safely within workspace.
     
@@ -284,6 +296,7 @@ def execute_command(command: str, timeout: int = 30, capture_output: bool = True
         }
 
 
+@tool
 def execute_script(script_content: str, script_type: str = "python", timeout: int = 300) -> Dict[str, Any]:
     """Execute script content safely within workspace.
     
@@ -320,6 +333,7 @@ def execute_script(script_content: str, script_type: str = "python", timeout: in
         }
 
 
+@tool
 def run_tests(test_path: str = ".", framework: Optional[str] = None, timeout: int = 300, verbose: bool = True) -> Dict[str, Any]:
     """Run tests with framework detection and result parsing.
     
@@ -358,6 +372,7 @@ def run_tests(test_path: str = ".", framework: Optional[str] = None, timeout: in
         }
 
 
+@tool
 def detect_test_frameworks(directory: str = "") -> Dict[str, Any]:
     """Detect available testing frameworks in the workspace.
     

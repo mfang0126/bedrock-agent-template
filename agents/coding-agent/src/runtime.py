@@ -5,7 +5,6 @@ This module provides the entry point for running the coding agent
 with proper initialization and error handling.
 """
 
-import json
 import os
 import sys
 import logging
@@ -15,7 +14,8 @@ from pathlib import Path
 src_dir = Path(__file__).parent
 sys.path.insert(0, str(src_dir))
 
-from coding_agent import create_coding_agent
+from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from agent import create_coding_agent
 
 # Configure logging
 logging.basicConfig(
@@ -25,86 +25,69 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Create the AgentCore app
+app = BedrockAgentCoreApp()
 
-def main():
-    """Main entry point for the coding agent runtime."""
-    try:
-        # Initialize workspace root
-        workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
-        logger.info(f"Initializing coding agent with workspace: {workspace_root}")
-        
-        # Create the coding agent
-        agent = create_coding_agent(workspace_root)
-        
-        # Start the agent (this will depend on your specific runtime requirements)
-        logger.info("Coding agent initialized successfully")
-        
-        # For AgentCore, the agent should be available for invocation
-        # The actual runtime loop is handled by the AgentCore framework
-        return agent
-        
-    except Exception as e:
-        logger.error(f"Failed to initialize coding agent: {e}")
-        sys.exit(1)
+# Create the agent once at module level
+workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
+logger.info(f"Initializing coding agent with workspace: {workspace_root}")
+agent = create_coding_agent(workspace_root)
+logger.info("Coding agent initialized successfully")
 
-async def strands_agent_coding(user_input: str, user_id: str = "default") -> str:
+
+def _extract_user_input(payload):
+    """Extract user input from various possible payload formats."""
+    if not isinstance(payload, dict):
+        logger.warning(f"Invalid payload type: {type(payload)}")
+        return ""
+
+    # Try common payload keys in order of preference
+    for key in ["prompt", "input", "message", "text", "query"]:
+        value = payload.get(key, "")
+        if value and isinstance(value, str) and value.strip():
+            return value.strip()
+
+    logger.warning(f"No valid input found in payload keys: {list(payload.keys())}")
+    return ""
+
+
+@app.entrypoint
+async def strands_agent_coding(payload):
     """
-    AgentCore entrypoint for the Coding Agent with streaming support.
-    
-    Args:
-        user_input: User's coding request
-        user_id: User identifier for session management
-        
-    Yields:
-        Streaming response chunks
+    Coding Agent entrypoint for processing user requests with streaming support.
+
+    Handles coding operations with workspace isolation and safety controls.
     """
-    from .common.response_formatter import format_coding_response, create_error_response
-    
     try:
-        # Initialize workspace root
-        workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
-        logger.info(f"Initializing coding agent with workspace: {workspace_root}")
-        
-        # Create the coding agent
-        agent = create_coding_agent(workspace_root)
-        
-        # Stream progress for initialization
-        yield f"data: {json.dumps({'type': 'progress', 'message': 'Coding agent initialized successfully'})}\n\n"
-        
-        # Process user input with streaming
-        try:
-            # Use async streaming if available
-            if hasattr(agent, 'stream_async'):
-                async for chunk in agent.stream_async(user_input, user_id=user_id):
-                    if chunk:
-                        yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
-            else:
-                # Fallback to synchronous processing
-                logger.warning("Agent does not support streaming, falling back to synchronous processing")
-                response = agent(user_input, user_id=user_id)
-                
-                # Format the response using the coding response formatter
-                formatted_response = format_coding_response(
-                    operation="agent_response",
-                    result_data={"response": response},
-                    success=True
-                )
-                
-                yield f"data: {json.dumps({'type': 'response', 'content': formatted_response.to_dict()})}\n\n"
-                
-        except Exception as e:
-            logger.error(f"Error during agent processing: {e}")
-            error_response = create_error_response(str(e), "agent_processing")
-            yield f"data: {json.dumps({'type': 'error', 'content': error_response.to_dict()})}\n\n"
-            
-        # Signal completion
-        yield f"data: {json.dumps({'type': 'complete'})}\n\n"
-        
+        # Extract user input from payload
+        user_input = _extract_user_input(payload)
+
+        # Validate input
+        if not user_input:
+            logger.info("Empty input received, returning greeting message")
+            yield "Hello! I'm the Coding Agent. Please provide a coding task or request."
+            return
+
+        logger.info(f"📥 Processing coding request: {user_input}")
+
+        # Process the request with streaming
+        stream = agent.stream_async(user_input)
+
+        # Stream response chunks
+        async for event in stream:
+            # Extract text from different event formats
+            if isinstance(event, dict):
+                if "text" in event:
+                    yield event["text"]
+                elif "content" in event:
+                    yield event["content"]
+            elif isinstance(event, str):
+                yield event
+
     except Exception as e:
-        logger.error(f"Failed to initialize coding agent: {e}")
-        error_response = create_error_response(str(e), "agent_initialization")
-        yield f"data: {json.dumps({'type': 'error', 'content': error_response.to_dict()})}\n\n"
+        logger.error(f"Coding Agent error: {str(e)}", exc_info=True)
+        yield f"❌ Error: {str(e)}"
 
 
 if __name__ == "__main__":
-    main()
+    app.run()

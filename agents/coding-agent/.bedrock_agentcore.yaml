@@ -21,11 +21,11 @@ agents:
     bedrock_agentcore:
       agent_id: codingagent-lE7IQU3dK8
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/codingagent-lE7IQU3dK8
-      agent_session_id: 848deb41-475f-4b72-869d-753df147e517
+      agent_session_id: 5048a64e-c9a3-4fdd-a30a-4b4221473d85
     codebuild:
-      project_name: null
-      execution_role: null
-      source_bucket: null
+      project_name: bedrock-agentcore-codingagent-builder
+      execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-3e99a3f99b
+      source_bucket: bedrock-agentcore-codebuild-sources-670326884047-ap-southeast-2
     memory:
       mode: STM_ONLY
       memory_id: codingagent_mem-5s8o4OA2la
