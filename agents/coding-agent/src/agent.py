@@ -7,8 +7,12 @@ workspace management, and test running capabilities using the Strands framework.
 
 import os
 import logging
-from typing import Dict, List, Optional, Any
+import shutil
+import json
+from typing import Dict, List, Optional, Any, Generator
 from pathlib import Path
+from datetime import datetime
+import glob
 
 from strands import Agent, tool
 from strands.models import BedrockModel
@@ -375,16 +379,16 @@ def run_tests(test_path: str = ".", framework: Optional[str] = None, timeout: in
 @tool
 def detect_test_frameworks(directory: str = "") -> Dict[str, Any]:
     """Detect available testing frameworks in the workspace.
-    
+
     Args:
         directory: Directory to scan (empty for workspace root)
-        
+
     Returns:
         Dict containing detected frameworks
     """
     workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
     test_runner = TestRunner(workspace_root)
-    
+
     try:
         frameworks = test_runner.detect_frameworks(directory)
         return {
@@ -400,6 +404,238 @@ def detect_test_frameworks(directory: str = "") -> Dict[str, Any]:
             "success": False,
             "error": str(e),
             "message": f"Failed to detect frameworks in directory: {directory}"
+        }
+
+
+@tool
+def archive_session_work(session_id: Optional[str] = None, cleanup_temp: bool = True) -> Dict[str, Any]:
+    """Archive current session work with progress streaming.
+
+    This tool archives all files in the workspace (except .archive and .git) to a session archive,
+    cleans up temporary files, and verifies workspace is clean for the next session.
+
+    Args:
+        session_id: Optional custom session identifier (auto-generated if not provided)
+        cleanup_temp: Whether to clean temporary files after archiving
+
+    Returns:
+        Dict containing archive results with session_id, files_archived count, and archive location
+    """
+    workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
+
+    # Generate session_id if not provided
+    if not session_id:
+        session_id = datetime.now().strftime("session_%Y%m%d_%H%M%S")
+
+    # Archive directory setup
+    archive_root = os.path.join(workspace_root, '.archive')
+    archive_path = os.path.join(archive_root, session_id)
+
+    try:
+        # Create archive directory
+        os.makedirs(archive_path, exist_ok=True)
+
+        # Identify files to archive (exclude .archive and .git)
+        session_files = []
+        for root, dirs, files in os.walk(workspace_root):
+            # Skip .archive and .git directories
+            dirs[:] = [d for d in dirs if d not in {'.archive', '.git', 'node_modules'}]
+
+            for file in files:
+                file_path = os.path.join(root, file)
+                session_files.append(file_path)
+
+        # Archive files preserving directory structure
+        archived_count = 0
+        for file_path in session_files:
+            rel_path = os.path.relpath(file_path, workspace_root)
+            dest_path = os.path.join(archive_path, rel_path)
+
+            # Create parent directories
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+
+            # Copy file
+            shutil.copy2(file_path, dest_path)
+            archived_count += 1
+
+        # Clean temporary files if requested
+        temp_files_removed = 0
+        if cleanup_temp:
+            temp_patterns = [
+                '**/*.tmp', '**/*.temp', '**/*.log',
+                '**/__pycache__', '**/*.pyc', '**/.pytest_cache',
+                '**/.DS_Store', '**/.cache'
+            ]
+
+            for pattern in temp_patterns:
+                for temp_file in glob.glob(os.path.join(workspace_root, pattern), recursive=True):
+                    if '.archive' not in temp_file and '.git' not in temp_file:
+                        if os.path.isfile(temp_file):
+                            os.remove(temp_file)
+                            temp_files_removed += 1
+                        elif os.path.isdir(temp_file):
+                            shutil.rmtree(temp_file)
+                            temp_files_removed += 1
+
+        # Create session summary
+        summary = {
+            "session_id": session_id,
+            "archived_at": datetime.now().isoformat(),
+            "files_archived": archived_count,
+            "temp_files_removed": temp_files_removed,
+            "archive_location": archive_path,
+            "workspace_state": "clean"
+        }
+
+        summary_path = os.path.join(archive_path, 'session_summary.json')
+        with open(summary_path, 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        # Verify workspace is clean
+        remaining_files = []
+        for root, dirs, files in os.walk(workspace_root):
+            dirs[:] = [d for d in dirs if d not in {'.archive', '.git', 'node_modules'}]
+            remaining_files.extend(files)
+
+        workspace_clean = len(remaining_files) == 0
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "files_archived": archived_count,
+            "temp_files_removed": temp_files_removed,
+            "archive_location": archive_path,
+            "workspace_clean": workspace_clean,
+            "message": f"Session {session_id} archived successfully. Workspace {'is clean' if workspace_clean else 'has remaining files'}."
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to archive session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "session_id": session_id,
+            "message": f"Failed to archive session: {session_id}"
+        }
+
+
+@tool
+def list_archived_sessions() -> Dict[str, Any]:
+    """List all archived sessions with metadata.
+
+    Returns:
+        Dict containing list of archived sessions with their metadata
+    """
+    workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
+    archive_root = os.path.join(workspace_root, '.archive')
+
+    try:
+        if not os.path.exists(archive_root):
+            return {
+                "success": True,
+                "sessions": [],
+                "total_sessions": 0,
+                "message": "No archived sessions found"
+            }
+
+        sessions = []
+        for session_dir in os.listdir(archive_root):
+            session_path = os.path.join(archive_root, session_dir)
+            if not os.path.isdir(session_path):
+                continue
+
+            summary_path = os.path.join(session_path, 'session_summary.json')
+            if os.path.exists(summary_path):
+                with open(summary_path, 'r') as f:
+                    summary = json.load(f)
+                    sessions.append(summary)
+            else:
+                # Session without summary - create minimal info
+                sessions.append({
+                    "session_id": session_dir,
+                    "archive_location": session_path,
+                    "archived_at": "Unknown"
+                })
+
+        # Sort by archived_at (newest first)
+        sessions.sort(key=lambda x: x.get('archived_at', ''), reverse=True)
+
+        return {
+            "success": True,
+            "sessions": sessions,
+            "total_sessions": len(sessions),
+            "message": f"Found {len(sessions)} archived sessions"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to list archived sessions: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to list archived sessions"
+        }
+
+
+@tool
+def restore_session(session_id: str) -> Dict[str, Any]:
+    """Restore files from an archived session.
+
+    Args:
+        session_id: The session identifier to restore
+
+    Returns:
+        Dict containing restore results with files_restored list and count
+    """
+    workspace_root = os.getenv('WORKSPACE_ROOT', '/tmp/coding_workspace')
+    archive_root = os.path.join(workspace_root, '.archive')
+    archive_path = os.path.join(archive_root, session_id)
+
+    try:
+        if not os.path.exists(archive_path):
+            return {
+                "success": False,
+                "error": f"Session {session_id} not found",
+                "message": f"Session {session_id} does not exist in archive"
+            }
+
+        # Get list of files to restore
+        files_to_restore = []
+        for root, dirs, files in os.walk(archive_path):
+            for file in files:
+                if file == 'session_summary.json':
+                    continue
+                file_path = os.path.join(root, file)
+                rel_path = os.path.relpath(file_path, archive_path)
+                files_to_restore.append(rel_path)
+
+        # Restore files
+        restored_count = 0
+        for rel_path in files_to_restore:
+            src_path = os.path.join(archive_path, rel_path)
+            dest_path = os.path.join(workspace_root, rel_path)
+
+            # Create parent directories
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+
+            # Copy file
+            shutil.copy2(src_path, dest_path)
+            restored_count += 1
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "files_restored": files_to_restore,
+            "total_restored": restored_count,
+            "message": f"Restored {restored_count} files from session {session_id}"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to restore session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "session_id": session_id,
+            "message": f"Failed to restore session: {session_id}"
         }
 
 
@@ -437,6 +673,7 @@ You have access to comprehensive tools for:
 - Executing commands and scripts with security controls and timeout protection
 - Running tests with automatic framework detection and result parsing
 - Listing and organizing files with pattern matching
+- Session archiving and workspace cleanup for organized development
 
 When users ask for coding help, follow these best practices:
 1. Create or setup appropriate workspaces for their projects
@@ -446,9 +683,17 @@ When users ask for coding help, follow these best practices:
 5. Run comprehensive tests to validate code functionality
 6. Provide clear explanations of what you're doing and why
 
+Workspace Management Best Practices:
+- At the end of each session, use archive_session_work() to archive completed work
+- This keeps the workspace clean and organized for the next session
+- All session work is preserved in .archive/ directory with timestamps
+- Use list_archived_sessions() to see previous work
+- Use restore_session() to recover files from previous sessions if needed
+
 Always prioritize security by working within designated workspace boundaries.
 Use appropriate timeouts for long-running operations.
-Provide detailed feedback on command execution and test results."""
+Provide detailed feedback on command execution and test results.
+Stream progress updates for long-running operations so users can see what's happening."""
 
     # Create agent with all coding tools
     agent = Agent(
@@ -464,8 +709,11 @@ Provide detailed feedback on command execution and test results."""
             execute_script,
             run_tests,
             detect_test_frameworks,
+            archive_session_work,
+            list_archived_sessions,
+            restore_session,
         ],
         system_prompt=system_prompt,
     )
-    
+
     return agent
