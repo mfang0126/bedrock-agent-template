@@ -1,4 +1,4 @@
-# Multi-agent platform Dockerfile - Coding Agent
+# Multi-agent platform Dockerfile - Orchestrator Agent
 # Based on proven GitHub Agent template
 
 FROM public.ecr.aws/docker/library/python:3.12-slim
@@ -30,5 +30,5 @@ COPY . .
 # Expose port for AgentCore
 EXPOSE 8000
 
-# Coding Agent specific entrypoint
-CMD ["opentelemetry-instrument", "python", "-m", "src.agents.coding_agent.runtime"]
+# Orchestrator Agent specific entrypoint
+CMD ["opentelemetry-instrument", "python", "-m", "src.agents.orchestrator_agent.runtime"]
