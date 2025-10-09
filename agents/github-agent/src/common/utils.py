@@ -1,9 +1,9 @@
-"""Utilities for normalizing GitHub agent responses."""
+"""Utilities for runtime response handling and logging."""
 
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -65,42 +65,103 @@ def clean_json_response(
     return AgentResponse(success=True, message=raw_response, agent_type=agent_type)
 
 
-def format_github_response(
-    action: str,
-    result_data: Dict[str, Any],
-    repository: str = None,
-    success: bool = True,
-) -> AgentResponse:
+def extract_text_from_event(event: Dict[str, Any]) -> List[str]:
     """
-    Format GitHub agent responses into standardized structure.
+    Extract text content from different agent event formats.
+
+    Handles two formats:
+    1. Standard result format: result -> content -> text
+    2. Tool result format: message -> content -> toolResult -> content -> text
 
     Args:
-        action: GitHub action performed (list_repos, create_issue, etc.)
-        result_data: Result data from GitHub API
-        repository: Repository name if applicable
-        success: Whether the action was successful
+        event: Agent streaming event dictionary
 
     Returns:
-        Formatted AgentResponse for GitHub operations
+        List of extracted text strings
     """
-    data = {
-        "action": action,
-        "repository": repository,
-        "result": result_data,
-        "items_count": len(result_data) if isinstance(result_data, list) else 1,
+    extracted_texts = []
+
+    # Format 1: result -> content -> text
+    if isinstance(event, dict) and "result" in event:
+        result = event["result"]
+        if isinstance(result, dict) and "content" in result:
+            for content_item in result["content"]:
+                if isinstance(content_item, dict) and "text" in content_item:
+                    extracted_texts.append(content_item["text"])
+
+    # Format 2: message -> content -> toolResult -> content -> text
+    if isinstance(event, dict) and "message" in event:
+        message = event["message"]
+        if isinstance(message, dict) and "content" in message:
+            for content_item in message["content"]:
+                # Check for toolResult
+                if isinstance(content_item, dict) and "toolResult" in content_item:
+                    tool_result = content_item["toolResult"]
+                    if isinstance(tool_result, dict) and "content" in tool_result:
+                        for tool_content in tool_result["content"]:
+                            if isinstance(tool_content, dict) and "text" in tool_content:
+                                extracted_texts.append(tool_content["text"])
+
+    return extracted_texts
+
+
+def log_server_event(event: Dict[str, Any], prefix: str = "Full event") -> None:
+    """
+    Log event on server side with consistent formatting.
+
+    Args:
+        event: Event to log
+        prefix: Log message prefix (default: "Full event")
+    """
+    print(f"📤 Server log - {prefix}: {event}")
+
+
+def log_server_message(message: str, level: str = "info") -> None:
+    """
+    Log message on server side with emoji indicators.
+
+    Args:
+        message: Message to log
+        level: Log level (info, success, warning, error)
+    """
+    emoji_map = {
+        "info": "📤",
+        "success": "✅",
+        "warning": "⚠️",
+        "error": "🚨",
     }
+    emoji = emoji_map.get(level, "📤")
+    print(f"{emoji} Server log - {message}")
 
-    # Generate contextual message
-    messages = {
-        "list_repos": f"Found {len(result_data)} repositories",
-        "create_repo": f"Successfully created repository: {result_data.get('name', 'Unknown') if isinstance(result_data, dict) else 'Unknown'}",
-        "list_issues": f"Found {len(result_data)} issues in {repository}",
-        "create_issue": f"Created issue #{result_data.get('number', 'Unknown') if isinstance(result_data, dict) else 'Unknown'}: {result_data.get('title', 'Unknown') if isinstance(result_data, dict) else 'Unknown'}",
-        "close_issue": f"Closed issue #{result_data.get('number', 'Unknown') if isinstance(result_data, dict) else 'Unknown'} in {repository}",
-    }
 
-    message = messages.get(action, f"Completed {action} operation")
+def create_oauth_message(oauth_url: str) -> str:
+    """
+    Create standardized OAuth authorization message.
 
-    return AgentResponse(
-        success=success, message=message, data=data, agent_type="github"
-    )
+    Args:
+        oauth_url: OAuth authorization URL
+
+    Returns:
+        Formatted OAuth message with URL
+    """
+    return f"""🔐 GitHub Authorization Required
+
+Please visit this URL to authorize access to your GitHub account:
+
+{oauth_url}
+
+After authorizing, please run your command again to access your GitHub data."""
+
+
+def format_client_text(text: str, add_newline: bool = True) -> str:
+    """
+    Format text for client output with optional newline.
+
+    Args:
+        text: Text to format
+        add_newline: Whether to add newline at end (default: True)
+
+    Returns:
+        Formatted text string
+    """
+    return text + "\n" if add_newline else text
