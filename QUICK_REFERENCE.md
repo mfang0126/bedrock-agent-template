@@ -4,6 +4,11 @@ Quick copy-paste reference for all AgentCore commands.
 
 ## Setup Commands (One-Time)
 
+### All-in-one Bootstrap
+```bash
+AWS_REGION=ap-southeast-2 ./scripts/setup-aws-flexible.sh
+```
+
 ### Install Dependencies
 ```bash
 uv sync --all-extras
@@ -32,10 +37,14 @@ aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent
 ### Setup OAuth Providers
 ```bash
 # GitHub OAuth (required for GitHub agent)
-python setup_github_provider.py
+uv run python setup_github_provider.py
+# Replace an existing provider after credential changes
+uv run python setup_github_provider.py --update --force
 
 # JIRA OAuth (optional - can use environment variables for testing)
-python setup_jira_provider.py
+uv run python setup_jira_provider.py
+# Replace an existing provider after credential changes
+uv run python setup_jira_provider.py --update --force
 ```
 
 ## Deployment Commands

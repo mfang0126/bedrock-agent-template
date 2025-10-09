@@ -132,7 +132,7 @@ if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
 fi
 
 if [ -n "$GITHUB_CLIENT_ID" ] && [ -n "$GITHUB_CLIENT_SECRET" ]; then
-    python setup_github_provider.py
+    uv run python setup_github_provider.py
     echo -e "${GREEN}✅ GitHub provider setup complete${NC}"
 else
     echo -e "${YELLOW}⚠️  Skipping GitHub provider (credentials not configured)${NC}"
@@ -142,11 +142,11 @@ fi
 echo ""
 echo "Setting up JIRA OAuth provider..."
 if [ -n "$ATLASSIAN_CLIENT_ID" ] && [ -n "$ATLASSIAN_CLIENT_SECRET" ]; then
-    python setup_jira_provider.py
+    uv run python setup_jira_provider.py
     echo -e "${GREEN}✅ JIRA provider setup complete${NC}"
 else
     echo -e "${YELLOW}⚠️  Skipping JIRA provider (credentials not configured)${NC}"
-    echo "   You can run 'python setup_jira_provider.py' later"
+    echo "   You can run 'uv run python setup_jira_provider.py' later"
 fi
 
 echo ""

@@ -75,7 +75,10 @@ AWS_REGION=ap-southeast-2
 ### 2. Create Credential Provider
 
 ```bash
-uv run python setup_github_provider.py
+uv run python setup_github_provider.py --region ap-southeast-2
+
+# Recreate the provider after rotating credentials
+uv run python setup_github_provider.py --region ap-southeast-2 --update --force
 ```
 
 **Expected Output:**
@@ -238,7 +241,7 @@ Everything is implemented following the notebook pattern. Ready for:
 
 1. Create GitHub OAuth App (if not done)
 2. Add credentials to `.env`
-3. Run `uv run python setup_github_provider.py`
+3. Run `uv run python setup_github_provider.py --region ap-southeast-2`
 4. Deploy with `agentcore configure` + `agentcore launch`
 5. Test with `agentcore invoke`
 

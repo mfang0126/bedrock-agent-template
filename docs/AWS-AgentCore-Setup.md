@@ -40,8 +40,10 @@ aws ecr create-repository --repository-name bedrock-agentcore-coding_agent --reg
 aws ecr create-repository --repository-name bedrock-agentcore-orchestrator_agent --region $AWS_REGION
 
 # 6. Setup OAuth providers
-python setup_github_provider.py  # For GitHub agent
-python setup_jira_provider.py    # For JIRA agent (optional - can use API token)
+uv run python setup_github_provider.py  # For GitHub agent
+uv run python setup_github_provider.py --update --force  # Replace GitHub provider (optional)
+uv run python setup_jira_provider.py    # For JIRA agent (optional - can use API token)
+uv run python setup_jira_provider.py --update --force    # Replace JIRA provider (optional)
 
 # 7. Deploy all agents
 uv run poe deploy-github
@@ -53,6 +55,8 @@ uv run poe deploy-orchestrator
 # 8. Test
 uv run poe invoke-planning '{"prompt": "Hello"}' --user-id "test"
 ```
+
+> 💡 Prefer an interactive helper? Run `AWS_REGION=ap-southeast-2 ./scripts/setup-aws-flexible.sh` to execute the same steps with guardrails and idempotent checks.
 
 **Continue reading for detailed explanations of each step.**
 
@@ -353,7 +357,7 @@ If using GitHub agent:
 # Enable Device Flow
 
 # Run setup script
-python setup_github_provider.py
+uv run python setup_github_provider.py
 
 # This creates the credential provider in AgentCore Identity
 ```

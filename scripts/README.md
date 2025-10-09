@@ -76,14 +76,21 @@ uv run poe deploy-<agent-name>
 *Missing OAuth credentials:*
 ```bash
 # Setup GitHub provider separately
-python setup_github_provider.py
+uv run python setup_github_provider.py
+# Update an existing GitHub provider
+uv run python setup_github_provider.py --update --force
 
 # Setup JIRA provider separately
-python setup_jira_provider.py
+uv run python setup_jira_provider.py
+# Update an existing JIRA provider
+uv run python setup_jira_provider.py --update --force
 ```
 
 *ECR repository already exists:*
 - Script will skip and continue (safe to re-run)
+
+*Need everything end-to-end:*
+- Run `AWS_REGION=ap-southeast-2 ./scripts/setup-aws-flexible.sh` for idempotent provisioning (installs deps, configures agents, creates providers/ECR).
 
 ## Manual Setup
 

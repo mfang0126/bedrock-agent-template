@@ -122,7 +122,10 @@ JIRA_URL=https://your-domain.atlassian.net
 **Step 3: Create Credential Provider**
 ```bash
 # Run the setup script
-python setup_jira_provider.py
+uv run python setup_jira_provider.py
+
+# Replace the provider after rotating credentials
+uv run python setup_jira_provider.py --update --force
 ```
 
 This will:

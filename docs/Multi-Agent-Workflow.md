@@ -465,7 +465,9 @@ agentcore configure -e src/agents/planning_agent/runtime.py
 agentcore launch
 
 # 3. Deploy JIRA Agent
-python setup_jira_provider.py
+uv run python setup_jira_provider.py
+# Replace existing provider if credentials rotated
+uv run python setup_jira_provider.py --update --force
 agentcore configure -e src/agents/jira_agent/runtime.py
 agentcore launch
 

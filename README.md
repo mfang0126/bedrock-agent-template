@@ -8,85 +8,93 @@ Following the official AWS notebook pattern - tools use real GitHub API with `@r
 
 ---
 
-## 🚀 Quick Deployment Guide
+## 🚀 Getting Started
 
-### Prerequisites
+### TL;DR
 
-1. **GitHub OAuth App** (Device Flow enabled)
-   - Create at: https://github.com/settings/developers
-   - Copy Client ID and Client Secret
+```bash
+# Fresh environment bootstrap (installs deps, configures agents, creates providers, ensures ECR repos)
+AWS_REGION=ap-southeast-2 ./scripts/setup-aws-flexible.sh
 
-2. **AWS Setup**
-   - AWS credentials configured (`aws configure`)
-   - Bedrock AgentCore access in supported region
-   - Regions: `ap-southeast-2`, `us-west-2`, `ap-southeast-2`, `eu-central-1`
+# Rotate credentials or refresh an existing deployment
+uv sync
+uv run python setup_github_provider.py --region ap-southeast-2 --update --force
+uv run python setup_jira_provider.py   --region ap-southeast-2 --update --force  # optional
+```
 
-3. **Dependencies**
+### 1. Prerequisites
+
+1. Install **AWS CLI v2**, **jq**, and **uv** on your workstation.
+2. Ensure you have access to an AWS account with Bedrock AgentCore enabled (default region `ap-southeast-2`).
+3. Create OAuth apps:
+   - **GitHub OAuth App** with device authorization flow enabled (`client_id`, `client_secret`).
+   - **Atlassian OAuth 2.0 app** (optional, for the JIRA agent).
+
+### 2. New laptop or AWS account
+
+1. Clone the repo and open `outbound_auth_github/`.
+2. Populate environment variables:
    ```bash
-   uv sync --all-extras  # Includes agentcore-starter-toolkit
+   cp .env.example .env
+   # edit .env with GITHUB_* and optional ATLASSIAN_* secrets plus AWS_REGION
+   ```
+3. Run the guided bootstrap (idempotent, safe to re-run):
+   ```bash
+   AWS_REGION=ap-southeast-2 ./scripts/setup-aws-flexible.sh
+   ```
+   This script:
+   - Installs Python dependencies via `uv sync`.
+   - Configures all AgentCore runtimes (`agentcore configure -e ...`).
+   - Creates any missing ECR repositories.
+   - Creates or updates the GitHub and JIRA credential providers using the new unified setup scripts.
+4. Deploy an agent when ready:
+   ```bash
+   agentcore launch  # uses the runtime configured in .bedrock_agentcore.yaml
+   ```
+5. Test with a real user handle so OAuth tokens persist per identity:
+   ```bash
+   agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
    ```
 
-### Step 1: Configure Credentials
+### 3. Existing deployment (rotate credentials or migrate machines)
+
+1. Sync dependencies: `uv sync`.
+2. Recreate credential providers in your target region:
+   ```bash
+   uv run python setup_github_provider.py --region ap-southeast-2 --update --force
+   uv run python setup_jira_provider.py   --region ap-southeast-2 --update --force  # optional
+   ```
+3. Update `.bedrock_agentcore.yaml` if necessary:
+   ```bash
+   agentcore configure -e src/agents/github_agent/runtime.py --region ap-southeast-2 --non-interactive
+   ```
+4. Redeploy and test:
+   ```bash
+   agentcore launch
+   agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
+   ```
+
+### 4. Manual provider commands
+
+If you prefer running the Python setup scripts directly:
 
 ```bash
-# Copy example and add your GitHub OAuth credentials
-cp .env.example .env
+# GitHub provider (create or replace)
+uv run python setup_github_provider.py --region ap-southeast-2
+uv run python setup_github_provider.py --region ap-southeast-2 --update --force
 
-# Edit .env:
-GITHUB_CLIENT_ID=your_github_oauth_client_id
-GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
-AWS_REGION=ap-southeast-2
+# Atlassian provider for JIRA (optional)
+uv run python setup_jira_provider.py --region ap-southeast-2
+uv run python setup_jira_provider.py --region ap-southeast-2 --update --force
 ```
 
-### Step 2: Create GitHub Credential Provider
+> ℹ️ `--force` skips interactive prompts, making the scripts automation-friendly. Without `--force`, the scripts ask before replacing an existing provider.
 
-```bash
-# This creates the OAuth provider in AgentCore Identity
-uv run python setup_github_provider.py
-```
+### 5. OAuth testing checklist
 
-**Output:**
-```
-✅ SUCCESS! GitHub credential provider created
-Provider ARN: arn:aws:bedrock-agentcore:...
-```
-
-###Step 3: Deploy to AgentCore Runtime
-
-```bash
-# Configure deployment
-agentcore configure -e src/agents/github_agent/runtime.py --non-interactive
-
-# Deploy to AWS (uses CodeBuild - no local Docker needed!)
-agentcore launch
-
-# This will:
-# - Build ARM64 container via AWS CodeBuild
-# - Push to ECR
-# - Deploy to AgentCore Runtime
-# - Set up CloudWatch logging
-# - Activate endpoint
-```
-
-### Step 4: Test Your Agent
-
-```bash
-# Invoke the agent with a user ID (required for OAuth 3LO)
-agentcore invoke '{"prompt": "list my repositories"}' --user-id "user-123"
-
-# What happens:
-# 1. You'll see an authorization URL in the logs
-# 2. Visit the URL and authorize the GitHub app
-# 3. AgentCore securely stores YOUR OAuth token (isolated per user)
-# 4. The agent lists YOUR GitHub repositories!
-```
-
-**Why `--user-id` is required:**
-- 3LO (Three-Legged OAuth) = "on behalf of a user"
-- Each user gets their own isolated OAuth tokens
-- AgentCore Identity manages token storage per user
-- Your tokens are NEVER accessible to other users
-- In production: Pass real user IDs from your auth system
+- Always include `--user-id` when invoking OAuth-enabled agents so AgentCore can scope tokens per user.
+- After rotating credentials, rerun the relevant setup script with `--update --force`, redeploy the agent, and re-run the first invocation to refresh tokens.
+- Use `agentcore logs` to retrieve the one-time authorization URL during the device flow sign-in.
 
 ---
 
@@ -389,8 +397,8 @@ agentcore launch
 
 ### "Credential provider not found"
 ```bash
-# Run setup again
-uv run python setup_github_provider.py
+# Run setup again (include region override if needed)
+uv run python setup_github_provider.py --region ap-southeast-2 --update --force
 ```
 
 ### "No access to Bedrock AgentCore"

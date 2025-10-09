@@ -5,7 +5,6 @@ in Amazon Bedrock AgentCore Identity service.
 """
 
 import boto3
-import json
 from typing import Dict, Optional
 
 
@@ -117,6 +116,83 @@ class CredentialProviderManager:
         response = self.client.list_oauth2_credential_providers()
         return response.get('credentialProviderSummaries', [])
 
+    def find_provider_by_name(self, name: str) -> Optional[Dict]:
+        """Return provider summary for the given name if it exists."""
+        for provider in self.list_providers():
+            if provider.get('name') == name:
+                return provider
+        return None
+
+    def delete_provider_by_name(self, name: str) -> bool:
+        """Delete credential provider by name.
+
+        Returns:
+            True if a provider was deleted, False if not found.
+        """
+        provider = self.find_provider_by_name(name)
+        if not provider:
+            return False
+
+        arn = provider.get('arn') or provider.get('credentialProviderArn')
+        if not arn:
+            raise ValueError(f"Provider {name} missing ARN")
+
+        self.delete_provider(arn)
+        return True
+
+    def _delete_existing_provider(
+        self,
+        existing: Dict,
+        provider_name: str
+    ) -> None:
+        """Delete provider referenced by an existing summary."""
+        arn = existing.get('arn') or existing.get('credentialProviderArn')
+        if not arn:
+            raise ValueError(f"Existing provider '{provider_name}' missing ARN")
+
+        print(f"♻️  Replacing existing provider '{provider_name}'")
+        self.delete_provider(arn)
+
+    def create_or_replace_github_provider(
+        self,
+        name: str,
+        client_id: str,
+        client_secret: str,
+        replace_existing: bool = False
+    ) -> Dict:
+        """Create GitHub provider, optionally replacing an existing one."""
+        existing = self.find_provider_by_name(name)
+        if existing and replace_existing:
+            self._delete_existing_provider(existing, name)
+        elif existing:
+            raise ValueError(f"Provider '{name}' already exists")
+
+        return self.create_github_provider(
+            name=name,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+
+    def create_or_replace_atlassian_provider(
+        self,
+        name: str,
+        client_id: str,
+        client_secret: str,
+        replace_existing: bool = False
+    ) -> Dict:
+        """Create Atlassian provider, optionally replacing an existing one."""
+        existing = self.find_provider_by_name(name)
+        if existing and replace_existing:
+            self._delete_existing_provider(existing, name)
+        elif existing:
+            raise ValueError(f"Provider '{name}' already exists")
+
+        return self.create_atlassian_provider(
+            name=name,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+
     def get_provider(self, provider_arn: str) -> Dict:
         """Get credential provider details.
 
@@ -143,7 +219,7 @@ class CredentialProviderManager:
         print(f"✅ Credential provider deleted: {provider_arn}")
 
 
-def setup_github_provider_from_env() -> Optional[str]:
+def setup_github_provider_from_env(replace_existing: bool = False) -> Optional[str]:
     """Setup GitHub credential provider using environment variables.
 
     Reads credentials from:
@@ -169,10 +245,11 @@ def setup_github_provider_from_env() -> Optional[str]:
 
     try:
         manager = CredentialProviderManager(region=region)
-        response = manager.create_github_provider(
+        response = manager.create_or_replace_github_provider(
             name='github-provider',
             client_id=client_id,
-            client_secret=client_secret
+            client_secret=client_secret,
+            replace_existing=replace_existing
         )
         return response['credentialProviderArn']
 
