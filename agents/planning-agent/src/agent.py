@@ -5,17 +5,14 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Optional
 
-try:  # pragma: no cover - allow standalone execution
-    from .tools.task_planner import breakdown_task
-    from .common.utils import format_planning_response
-except ImportError:  # pragma: no cover - executed as script
-    import sys
-    from pathlib import Path
+import sys
+from pathlib import Path
 
-    current_dir = Path(__file__).parent
-    sys.path.insert(0, str(current_dir))
-    from tools.task_planner import breakdown_task  # type: ignore
-    from common.utils import format_planning_response  # type: ignore
+current_dir = Path(__file__).parent
+sys.path.insert(0, str(current_dir))
+
+from tools.task_planner import breakdown_task
+from common.utils import format_planning_response
 
 
 def generate_plan(prompt: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

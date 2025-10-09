@@ -59,10 +59,48 @@ def format_planning_response(
     validation_results: Optional[Dict[str, Any]] = None,
     success: bool = True,
 ) -> AgentResponse:
-    """Create a standardized planning response payload."""
+    """Create a standardized planning response payload with formatted markdown."""
     phase_count = len(plan_data.get("phases", []))
     effort = plan_data.get("estimated_effort", "unspecified effort")
-    message = f"Generated implementation plan with {phase_count} phases (effort: {effort})."
+    risk_level = plan_data.get("risk_level", "Unknown")
+    title = plan_data.get("title", "Task Plan")
+    summary = plan_data.get("summary", "")
+
+    # Build formatted markdown message
+    message_parts = [
+        f"# 📋 {title}",
+        "",
+        f"**Summary:** {summary}",
+        f"**Estimated Effort:** {effort}",
+        f"**Risk Level:** {risk_level}",
+        f"**Phases:** {phase_count}",
+        "",
+    ]
+
+    # Add phases with tasks
+    phases = plan_data.get("phases", [])
+    for i, phase in enumerate(phases, 1):
+        phase_title = phase.get("title", f"Phase {i}")
+        duration = phase.get("duration", "N/A")
+        tasks = phase.get("tasks", [])
+
+        message_parts.append(f"## Phase {i}: {phase_title}")
+        message_parts.append(f"**Duration:** {duration}")
+        message_parts.append("")
+        message_parts.append("**Tasks:**")
+        for task in tasks:
+            message_parts.append(f"- {task}")
+        message_parts.append("")
+
+    # Add dependencies if present
+    dependencies = plan_data.get("dependencies", [])
+    if dependencies:
+        message_parts.append("## 🔗 Dependencies")
+        for dep in dependencies:
+            message_parts.append(f"- {dep}")
+        message_parts.append("")
+
+    message = "\n".join(message_parts)
 
     return AgentResponse(
         success=success,
