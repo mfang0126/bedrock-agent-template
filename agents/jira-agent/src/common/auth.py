@@ -4,7 +4,8 @@ Production-only implementation using OAuth 2.0 tokens from AgentCore Identity.
 Uses @requires_access_token decorator for OAuth flow management.
 """
 
-from typing import Dict, Optional
+import asyncio
+from typing import Callable, Dict, Optional
 
 from bedrock_agentcore.identity.auth import requires_access_token
 
@@ -16,19 +17,40 @@ _jira_access_token: Optional[str] = None
 _jira_headers: Optional[Dict[str, str]] = None
 _jira_url: Optional[str] = None
 
+# Global storage for OAuth URL to return to user
+pending_oauth_url: Optional[str] = None
+
+# Global callback to stream OAuth URL back to runtime
+oauth_url_callback: Optional[Callable[[str], None]] = None
+
 
 async def on_jira_auth_url(url: str):
     """Callback for JIRA authorization URL.
 
+    Stores URL globally and triggers immediate streaming back to user via callback.
+
     Args:
         url: Authorization URL for user to visit
     """
+    global pending_oauth_url, oauth_url_callback
+    pending_oauth_url = url
+
     print(f"\n{'=' * 60}")
     print(f"🔐 JIRA Authorization Required")
     print(f"{'=' * 60}")
     print(f"\n🌐 Authorization URL:")
     print(f"   {url}")
     print(f"\n{'=' * 60}\n")
+
+    # Trigger immediate callback to stream URL back to user
+    if oauth_url_callback:
+        try:
+            if asyncio.iscoroutinefunction(oauth_url_callback):
+                await oauth_url_callback(url)
+            else:
+                oauth_url_callback(url)
+        except Exception as e:
+            print(f"⚠️ Error in OAuth URL callback: {e}")
 
 
 @requires_access_token(

@@ -164,3 +164,23 @@ def create_error_response(error_message: str, agent_type: str = "unknown") -> Ag
         message=f"Error: {error_message}",
         agent_type=agent_type,
     )
+
+
+def create_oauth_message(oauth_url: str, service: str = "JIRA") -> str:
+    """
+    Create standardized OAuth authorization message.
+
+    Args:
+        oauth_url: OAuth authorization URL
+        service: Service name (GitHub, JIRA, etc.)
+
+    Returns:
+        Formatted OAuth message string
+    """
+    return f"""🔐 {service} Authorization Required
+
+Please visit this URL to authorize access to your {service} account:
+
+{oauth_url}
+
+After authorizing, please run your command again to access your {service} data."""

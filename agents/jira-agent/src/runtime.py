@@ -109,10 +109,14 @@ async def strands_agent_jira(payload):
 
     Handles JIRA ticket operations with OAuth 2.0 authentication.
     """
+    import asyncio
+
     from src.common import auth as jira_auth
     from src.common.utils import (
+        AgentResponse,
         clean_json_response,
         create_error_response,
+        create_oauth_message,
         extract_text_from_event,
         format_client_text,
         log_server_event,
@@ -129,19 +133,85 @@ async def strands_agent_jira(payload):
             yield format_client_text("Hello! I'm the JIRA Agent. Please provide a request related to JIRA tickets.")
             return
 
-        # Initialize JIRA OAuth - get token once at start
+        # Queue to receive OAuth URLs from callback immediately
+        oauth_url_queue: asyncio.Queue[str] = asyncio.Queue()
+        oauth_url_received = False
+
+        # Callback that puts OAuth URL into queue for immediate streaming
+        def stream_oauth_url_callback(url: str):
+            nonlocal oauth_url_received
+            try:
+                oauth_url_queue.put_nowait(url)
+                oauth_url_received = True
+                logger.info(f"📤 OAuth URL queued for immediate streaming: {url[:50]}...")
+            except Exception as e:
+                logger.error(f"⚠️ Error queuing OAuth URL: {e}")
+
+        # Register callback to capture OAuth URL immediately
+        jira_auth.oauth_url_callback = stream_oauth_url_callback
+
+        # Initialize JIRA OAuth
         logger.info("🔐 Initializing JIRA authentication...")
         yield format_client_text("🔐 Initializing JIRA authentication...")
 
+        # Create task to monitor OAuth URL queue and stream immediately
+        async def monitor_oauth_queue():
+            try:
+                # Wait for URL with short timeout to avoid blocking
+                url = await asyncio.wait_for(oauth_url_queue.get(), timeout=2.0)
+
+                oauth_message = create_oauth_message(url, "JIRA")
+                log_server_message("Streaming OAuth URL to user immediately", "success")
+
+                # Use response formatter for OAuth response
+                oauth_response = AgentResponse(
+                    success=False,
+                    message=oauth_message,
+                    data={"oauth_url": url, "requires_authorization": True},
+                    agent_type="jira",
+                )
+
+                return oauth_response
+            except asyncio.TimeoutError:
+                # No OAuth URL generated, authentication succeeded
+                return None
+
+        # Start authentication and OAuth URL monitoring concurrently
+        auth_task = asyncio.create_task(jira_auth.get_jira_access_token())
+        oauth_monitor_task = asyncio.create_task(monitor_oauth_queue())
+
+        # Wait for either authentication to complete or OAuth URL to be generated
+        done, pending = await asyncio.wait(
+            [auth_task, oauth_monitor_task],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+
+        # Check if OAuth URL was received
+        oauth_response = None
+        if oauth_monitor_task in done:
+            oauth_response = await oauth_monitor_task
+            if oauth_response:
+                # Stream OAuth URL immediately
+                yield format_client_text(oauth_response.message)
+                # Cancel auth task and return early
+                auth_task.cancel()
+                return
+
+        # Authentication completed without OAuth URL, proceed normally
         try:
-            await jira_auth.get_jira_access_token()
+            if not auth_task.done():
+                await auth_task
             logger.info("✅ JIRA authentication successful")
             yield format_client_text("✅ JIRA authentication successful")
+
         except Exception as e:
-            error_msg = f"❌ JIRA authentication failed: {str(e)}"
-            logger.error(error_msg)
-            yield format_client_text(error_msg)
-            return
+            logger.warning(f"⚠️ JIRA authentication pending or failed: {e}")
+
+            # Fallback: Check if OAuth URL was set but not streamed
+            if jira_auth.pending_oauth_url and not oauth_url_received:
+                oauth_message = create_oauth_message(jira_auth.pending_oauth_url, "JIRA")
+                yield format_client_text(oauth_message)
+                return
 
         logger.info(f"📥 Processing JIRA request: {user_input}")
 
