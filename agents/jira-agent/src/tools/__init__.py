@@ -1,12 +1,14 @@
-"""JIRA tools for ticket management and updates."""
+"""JIRA tools for ticket management and updates.
 
-from src.tools.tickets import fetch_jira_ticket, parse_ticket_requirements
-from src.tools.updates import update_jira_status, add_jira_comment, link_github_issue
+Exports tool classes for dependency injection:
+- JiraTicketTools: Fetch and parse tickets
+- JiraUpdateTools: Update status, add comments, link GitHub
+"""
+
+from src.tools.tickets import JiraTicketTools
+from src.tools.updates import JiraUpdateTools
 
 __all__ = [
-    "fetch_jira_ticket",
-    "parse_ticket_requirements",
-    "update_jira_status",
-    "add_jira_comment",
-    "link_github_issue",
+    "JiraTicketTools",
+    "JiraUpdateTools",
 ]

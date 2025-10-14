@@ -1,69 +1,95 @@
-"""JIRA ticket operations tools.
+"""JIRA ticket operations tools with dependency injection.
 
 Tools for fetching, parsing, and managing JIRA tickets.
+Refactored to use dependency injection for authentication.
 """
 
 import re
 import httpx
 from strands import tool
-from src.common.auth import get_jira_auth_headers, get_jira_url_cached
+
+from src.auth import JiraAuth
 
 
-@tool
-async def fetch_jira_ticket(ticket_id: str) -> str:
-    """Fetch JIRA ticket details.
+class JiraTicketTools:
+    """JIRA ticket operations with injected authentication.
+
+    This class provides tools for fetching and parsing JIRA tickets
+    using dependency-injected authentication.
 
     Args:
-        ticket_id: JIRA ticket ID (e.g., "PROJ-123")
+        auth: JiraAuth implementation (mock or real OAuth)
 
-    Returns:
-        Formatted ticket details including title, description, acceptance criteria
+    Example:
+        >>> from src.auth import MockJiraAuth
+        >>> auth = MockJiraAuth()
+        >>> tools = JiraTicketTools(auth)
+        >>> result = await tools.fetch_jira_ticket("PROJ-123")
     """
-    # Validate ticket ID format
-    if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
-        return f"❌ Invalid ticket ID format. Expected: PROJECT-123, got: {ticket_id}"
 
-    try:
-        # Get authentication headers (token set by runtime)
-        headers = get_jira_auth_headers()
-        jira_url = get_jira_url_cached()
+    def __init__(self, auth: JiraAuth):
+        """Initialize JIRA ticket tools with authentication.
 
-        # Fetch ticket from JIRA API
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{jira_url}/rest/api/3/issue/{ticket_id}",
-                headers=headers,
-                timeout=30.0
-            )
+        Args:
+            auth: JiraAuth implementation for API access
+        """
+        self.auth = auth
 
-            if response.status_code == 404:
-                return f"❌ Ticket {ticket_id} not found"
-            elif response.status_code == 401:
-                return "❌ Authentication failed. Check JIRA credentials"
-            elif response.status_code != 200:
-                return f"❌ JIRA API error: {response.status_code} - {response.text}"
+    @tool
+    async def fetch_jira_ticket(self, ticket_id: str) -> str:
+        """Fetch JIRA ticket details.
 
-            # Parse ticket data
-            ticket = response.json()
-            fields = ticket.get("fields", {})
+        Args:
+            ticket_id: JIRA ticket ID (e.g., "PROJ-123")
 
-            # Extract fields
-            title = fields.get("summary", "No title")
-            description = fields.get("description", "No description")
-            status = fields.get("status", {}).get("name", "Unknown")
-            priority = fields.get("priority", {}).get("name", "Unknown")
-            assignee = fields.get("assignee")
-            assignee_name = assignee.get("displayName") if assignee else "Unassigned"
-            labels = fields.get("labels", [])
+        Returns:
+            Formatted ticket details including title, description, acceptance criteria
+        """
+        # Validate ticket ID format
+        if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
+            return f"❌ Invalid ticket ID format. Expected: PROJECT-123, got: {ticket_id}"
 
-            # Extract acceptance criteria from description
-            acceptance_criteria = _extract_acceptance_criteria(description)
+        try:
+            # Get authentication from injected auth
+            headers = self.auth.get_auth_headers()
+            jira_url = self.auth.get_jira_url()
 
-            # Extract sprint info
-            sprint_info = _extract_sprint(fields)
+            # Fetch ticket from JIRA API
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{jira_url}/rest/api/3/issue/{ticket_id}",
+                    headers=headers,
+                    timeout=30.0
+                )
 
-            # Format output
-            output = f"""📋 {ticket_id}: {title}
+                if response.status_code == 404:
+                    return f"❌ Ticket {ticket_id} not found"
+                elif response.status_code == 401:
+                    return "❌ Authentication failed. Check JIRA credentials"
+                elif response.status_code != 200:
+                    return f"❌ JIRA API error: {response.status_code} - {response.text}"
+
+                # Parse ticket data
+                ticket = response.json()
+                fields = ticket.get("fields", {})
+
+                # Extract fields
+                title = fields.get("summary", "No title")
+                description = fields.get("description", "No description")
+                status = fields.get("status", {}).get("name", "Unknown")
+                priority = fields.get("priority", {}).get("name", "Unknown")
+                assignee = fields.get("assignee")
+                assignee_name = assignee.get("displayName") if assignee else "Unassigned"
+                labels = fields.get("labels", [])
+
+                # Extract acceptance criteria from description
+                acceptance_criteria = _extract_acceptance_criteria(description)
+
+                # Extract sprint info
+                sprint_info = _extract_sprint(fields)
+
+                # Format output
+                output = f"""📋 {ticket_id}: {title}
 
 **Status:** {status}
 **Priority:** {priority}
@@ -78,13 +104,41 @@ async def fetch_jira_ticket(ticket_id: str) -> str:
 
 **Labels:** {', '.join(labels) if labels else 'None'}
 """
-            return output
+                return output
 
-    except httpx.TimeoutException:
-        return f"❌ Request timed out. JIRA may be slow or unreachable."
-    except Exception as e:
-        return f"❌ Error fetching ticket: {str(e)}"
+        except httpx.TimeoutException:
+            return f"❌ Request timed out. JIRA may be slow or unreachable."
+        except Exception as e:
+            return f"❌ Error fetching ticket: {str(e)}"
 
+    @tool
+    async def parse_ticket_requirements(self, ticket_id: str) -> str:
+        """Parse ticket and extract structured requirements for Planning Agent.
+
+        Args:
+            ticket_id: JIRA ticket ID
+
+        Returns:
+            Structured requirements in JSON-like format
+        """
+        # First fetch the ticket
+        ticket_details = await self.fetch_jira_ticket(ticket_id)
+
+        if ticket_details.startswith("❌"):
+            return ticket_details
+
+        # For now, return the ticket details
+        # Planning Agent will parse this
+        return f"""
+Requirements from {ticket_id}:
+
+{ticket_details}
+
+Note: This data should be sent to Planning Agent for plan generation.
+"""
+
+
+# Helper functions (module-level, not part of class)
 
 def _extract_acceptance_criteria(description: str) -> list:
     """Extract acceptance criteria from ticket description.
@@ -172,30 +226,3 @@ def _extract_sprint(fields: dict) -> str:
                         return name_match.group(1)
 
     return "No sprint"
-
-
-@tool
-async def parse_ticket_requirements(ticket_id: str) -> str:
-    """Parse ticket and extract structured requirements for Planning Agent.
-
-    Args:
-        ticket_id: JIRA ticket ID
-
-    Returns:
-        Structured requirements in JSON-like format
-    """
-    # First fetch the ticket
-    ticket_details = await fetch_jira_ticket(ticket_id)
-
-    if ticket_details.startswith("❌"):
-        return ticket_details
-
-    # For now, return the ticket details
-    # Planning Agent will parse this
-    return f"""
-Requirements from {ticket_id}:
-
-{ticket_details}
-
-Note: This data should be sent to Planning Agent for plan generation.
-"""
