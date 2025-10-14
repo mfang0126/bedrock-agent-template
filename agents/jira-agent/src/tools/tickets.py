@@ -5,6 +5,7 @@ Refactored to use dependency injection for authentication.
 """
 
 import re
+from typing import Any, Dict, List, cast
 import httpx
 from strands import tool
 
@@ -36,18 +37,22 @@ class JiraTicketTools:
         self.auth = auth
 
     @tool
-    async def fetch_jira_ticket(self, ticket_id: str) -> str:
+    async def fetch_jira_ticket(self, ticket_id: str) -> Dict[str, Any]:
         """Fetch JIRA ticket details.
 
         Args:
             ticket_id: JIRA ticket ID (e.g., "PROJ-123")
 
         Returns:
-            Formatted ticket details including title, description, acceptance criteria
+            Dictionary with success, data (ticket details), and message
         """
         # Validate ticket ID format
         if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
-            return f"❌ Invalid ticket ID format. Expected: PROJECT-123, got: {ticket_id}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Invalid ticket ID format. Expected: PROJECT-123, got: {ticket_id}"
+            }
 
         try:
             # Get authentication from injected auth
@@ -63,11 +68,23 @@ class JiraTicketTools:
                 )
 
                 if response.status_code == 404:
-                    return f"❌ Ticket {ticket_id} not found"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ Ticket {ticket_id} not found"
+                    }
                 elif response.status_code == 401:
-                    return "❌ Authentication failed. Check JIRA credentials"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": "❌ Authentication failed. Check JIRA credentials"
+                    }
                 elif response.status_code != 200:
-                    return f"❌ JIRA API error: {response.status_code} - {response.text}"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ JIRA API error: {response.status_code} - {response.text}"
+                    }
 
                 # Parse ticket data
                 ticket = response.json()
@@ -104,43 +121,81 @@ class JiraTicketTools:
 
 **Labels:** {', '.join(labels) if labels else 'None'}
 """
-                return output
+
+                # Return structured response
+                return {
+                    "success": True,
+                    "data": {
+                        "ticket_id": ticket_id,
+                        "title": title,
+                        "description": description,
+                        "status": status,
+                        "priority": priority,
+                        "assignee": assignee_name,
+                        "sprint": sprint_info,
+                        "labels": labels,
+                        "acceptance_criteria": acceptance_criteria,
+                        "formatted_output": output
+                    },
+                    "message": f"Successfully fetched ticket {ticket_id}"
+                }
 
         except httpx.TimeoutException:
-            return f"❌ Request timed out. JIRA may be slow or unreachable."
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Request timed out. JIRA may be slow or unreachable."
+            }
         except Exception as e:
-            return f"❌ Error fetching ticket: {str(e)}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Error fetching ticket: {str(e)}"
+            }
 
     @tool
-    async def parse_ticket_requirements(self, ticket_id: str) -> str:
+    async def parse_ticket_requirements(self, ticket_id: str) -> Dict[str, Any]:
         """Parse ticket and extract structured requirements for Planning Agent.
 
         Args:
             ticket_id: JIRA ticket ID
 
         Returns:
-            Structured requirements in JSON-like format
+            Dictionary with success, data (requirements), and message
         """
         # First fetch the ticket
-        ticket_details = await self.fetch_jira_ticket(ticket_id)
+        ticket_response = await self.fetch_jira_ticket(ticket_id)  # type: ignore[arg-type,call-arg]
 
-        if ticket_details.startswith("❌"):
-            return ticket_details
+        if not ticket_response["success"]:
+            return ticket_response
 
-        # For now, return the ticket details
-        # Planning Agent will parse this
-        return f"""
+        # Extract data from successful response
+        ticket_data = ticket_response["data"]
+        formatted_output = ticket_data.get("formatted_output", "")
+
+        # Build requirements structure
+        requirements_text = f"""
 Requirements from {ticket_id}:
 
-{ticket_details}
+{formatted_output}
 
 Note: This data should be sent to Planning Agent for plan generation.
 """
 
+        return {
+            "success": True,
+            "data": {
+                "ticket_id": ticket_id,
+                "requirements": ticket_data,
+                "formatted_requirements": requirements_text
+            },
+            "message": f"Successfully parsed requirements from {ticket_id}"
+        }
+
 
 # Helper functions (module-level, not part of class)
 
-def _extract_acceptance_criteria(description: str) -> list:
+def _extract_acceptance_criteria(description: str) -> List[str]:
     """Extract acceptance criteria from ticket description.
 
     Looks for sections like:
@@ -175,7 +230,7 @@ def _extract_acceptance_criteria(description: str) -> list:
     return criteria
 
 
-def _format_acceptance_criteria(criteria: list) -> str:
+def _format_acceptance_criteria(criteria: List[str]) -> str:
     """Format acceptance criteria list."""
     if not criteria:
         return "No acceptance criteria specified"
@@ -203,7 +258,7 @@ def _format_description(description: str) -> str:
     return description
 
 
-def _extract_sprint(fields: dict) -> str:
+def _extract_sprint(fields: Dict[str, Any]) -> str:
     """Extract sprint information from ticket fields."""
     # Sprint field varies by JIRA configuration
     # Common field names: sprint, customfield_10020, etc.
@@ -218,7 +273,7 @@ def _extract_sprint(fields: dict) -> str:
                 # Get latest sprint
                 sprint = sprint_data[-1]
                 if isinstance(sprint, dict):
-                    return sprint.get("name", "Unknown Sprint")
+                    return cast(str, sprint.get("name", "Unknown Sprint"))
                 elif isinstance(sprint, str):
                     # Parse sprint string (format: "name=Sprint 24,...")
                     name_match = re.search(r'name=([^,]+)', sprint)

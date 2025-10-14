@@ -1,7 +1,7 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 
-# Copy files before user creation
+# Copy agent files
 COPY . .
 
 # All environment variables in one layer

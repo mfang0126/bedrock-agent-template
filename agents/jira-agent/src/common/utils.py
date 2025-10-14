@@ -13,10 +13,10 @@ class AgentResponse:
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-    timestamp: str = None
-    agent_type: str = None
+    timestamp: Optional[str] = None
+    agent_type: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
             self.timestamp = datetime.utcnow().isoformat()
 

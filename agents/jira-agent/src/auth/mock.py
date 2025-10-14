@@ -31,7 +31,7 @@ class MockJiraAuth(JiraAuth):
         'Bearer mock_jira_token_for_local_testing'
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize mock authentication."""
         self._token = "mock_jira_token_for_local_testing"
         self._cloud_id = "mock_cloud_id"

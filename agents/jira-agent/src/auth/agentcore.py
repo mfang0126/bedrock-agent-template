@@ -14,6 +14,23 @@ from .interface import JiraAuth
 from src.common.config import get_jira_url
 
 
+# Global reference to current auth instance for OAuth callback
+_current_auth_instance: Optional['AgentCoreJiraAuth'] = None
+
+
+async def _global_on_jira_auth_url(url: str) -> None:
+    """Global OAuth URL callback that delegates to current auth instance.
+
+    This is needed because the decorator requires a module-level callable,
+    but we need instance-specific callback behavior.
+
+    Args:
+        url: Authorization URL for user to visit
+    """
+    if _current_auth_instance:
+        await _current_auth_instance._on_jira_auth_url(url)
+
+
 class AgentCoreJiraAuth(JiraAuth):
     """Production Jira authentication using AgentCore OAuth 2.0.
 
@@ -42,13 +59,16 @@ class AgentCoreJiraAuth(JiraAuth):
         Args:
             oauth_url_callback: Optional callback for OAuth URL streaming
         """
+        global _current_auth_instance
+        _current_auth_instance = self
+
         self.oauth_url_callback = oauth_url_callback
         self._token: Optional[str] = None
         self._cloud_id: Optional[str] = None
         self._jira_url: Optional[str] = None
         self._pending_oauth_url: Optional[str] = None
 
-    async def _on_jira_auth_url(self, url: str):
+    async def _on_jira_auth_url(self, url: str) -> None:
         """Internal callback for JIRA authorization URL.
 
         Stores URL and triggers immediate streaming back to user via callback.
@@ -79,7 +99,7 @@ class AgentCoreJiraAuth(JiraAuth):
         provider_name="jira-provider",  # Must match AgentCore Identity provider name
         scopes=["read:jira-work", "write:jira-work", "offline_access"],  # Jira OAuth scopes
         auth_flow="USER_FEDERATION",  # 3LO (Three-Legged OAuth)
-        on_auth_url="_on_jira_auth_url",  # Authorization URL callback
+        on_auth_url=_global_on_jira_auth_url,  # Module-level callback that delegates to instance
         force_authentication=False,  # Don't force re-auth if token exists
     )
     async def get_token(self, *, access_token: str) -> str:

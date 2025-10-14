@@ -26,7 +26,7 @@ pending_oauth_url: Optional[str] = None
 oauth_url_callback: Optional[Callable[[str], None]] = None
 
 
-async def on_jira_auth_url(url: str):
+async def on_jira_auth_url(url: str) -> None:
     """Callback for JIRA authorization URL.
 
     Stores URL globally and triggers immediate streaming back to user via callback.
@@ -161,7 +161,7 @@ def get_jira_url_cached() -> str:
     return get_jira_url()
 
 
-def reset_jira_auth():
+def reset_jira_auth() -> None:
     """Reset JIRA authentication (for testing)."""
     global _jira_headers, _jira_url
     _jira_headers = None

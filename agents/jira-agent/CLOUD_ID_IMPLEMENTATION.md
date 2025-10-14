@@ -13,14 +13,17 @@ Successfully implemented Atlassian OAuth 2.0 cloud ID support for JIRA agent.
 
 ## Implementation Details
 
-### 1. Added Cloud ID Retrieval (`src/common/auth.py`)
+### 1. Cloud ID Retrieval (`src/common/auth.py`)
 
-**Changes Made**:
+The `get_jira_access_token()` function (decorated with `@requires_access_token`) automatically fetches the Atlassian cloud ID:
+
 ```python
-import httpx  # Added for HTTP requests
-
-_jira_cloud_id: Optional[str] = None  # Store Atlassian cloud ID
-
+@requires_access_token(
+    provider_name="jira-provider",
+    scopes=["read:jira-work", "write:jira-work", "offline_access"],
+    auth_flow="USER_FEDERATION",
+    on_auth_url=on_jira_auth_url,
+)
 async def get_jira_access_token(*, access_token: str) -> str:
     """Get JIRA access token and fetch cloud ID."""
     global _jira_access_token, _jira_url, _jira_cloud_id
@@ -38,18 +41,22 @@ async def get_jira_access_token(*, access_token: str) -> str:
             },
             timeout=10.0
         )
+        response.raise_for_status()
         resources = response.json()
 
         if resources and len(resources) > 0:
             _jira_cloud_id = resources[0]["id"]
+            site_url = resources[0]["url"]
             print(f"✅ Cloud ID retrieved: {_jira_cloud_id}")
+            print(f"   Site: {site_url}")
 
     return access_token
 ```
 
-### 2. Updated URL Caching (`src/common/auth.py`)
+### 2. URL Construction (`src/common/auth.py`)
 
-**Changes Made**:
+The `get_jira_url_cached()` function returns cloud-based URLs when cloud ID is available:
+
 ```python
 def get_jira_url_cached() -> str:
     """Get cached JIRA API URL.
@@ -59,23 +66,47 @@ def get_jira_url_cached() -> str:
     """
     global _jira_cloud_id
 
-    # Use cloud-based API URL if cloud ID is available (Atlassian OAuth 2.0)
+    # Use cloud-based API URL if cloud ID is available (OAuth 2.0)
     if _jira_cloud_id:
         return f"https://api.atlassian.com/ex/jira/{_jira_cloud_id}"
 
-    # Fallback to direct URL (legacy/API token auth)
+    # Fallback to direct URL (testing/API token auth)
     if _jira_url:
         return _jira_url
     return get_jira_url()
 ```
 
-### 3. Tool Compatibility
+### 3. Tool Integration
 
-**Verified**: All tools already use `get_jira_url_cached()`:
-- ✅ `src/tools/tickets.py` - fetch_jira_ticket()
-- ✅ `src/tools/updates.py` - update_jira_status(), add_jira_comment(), link_github_issue()
+All tools use injected authentication which provides the correct URL:
 
-**No changes needed** - tools automatically use cloud-based URLs after cloud ID retrieval.
+**Ticket Tools** (`src/tools/tickets.py`):
+```python
+class JiraTicketTools:
+    def __init__(self, auth: JiraAuth):
+        self.auth = auth
+
+    @tool
+    async def fetch_jira_ticket(self, ticket_id: str) -> Dict[str, Any]:
+        headers = self.auth.get_auth_headers()
+        jira_url = self.auth.get_jira_url()  # Gets cloud-based URL
+        # ... uses jira_url for API calls
+```
+
+**Update Tools** (`src/tools/updates.py`):
+```python
+class JiraUpdateTools:
+    def __init__(self, auth: JiraAuth):
+        self.auth = auth
+
+    @tool
+    async def update_jira_status(self, ticket_id: str, status: str) -> Dict[str, Any]:
+        headers = self.auth.get_auth_headers()
+        jira_url = self.auth.get_jira_url()  # Gets cloud-based URL
+        # ... uses jira_url for API calls
+```
+
+**All tools automatically use cloud-based URLs** - no tool-specific changes needed.
 
 ## Deployment
 

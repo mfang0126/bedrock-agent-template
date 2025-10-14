@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: github-Hn7UKwBMRj
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/github-Hn7UKwBMRj
-      agent_session_id: c90697a1-26a0-487b-8373-d5c32c33f604
+      agent_session_id: ec459a01-6323-4613-990b-a8c8e622394a
     codebuild:
       project_name: bedrock-agentcore-github-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94

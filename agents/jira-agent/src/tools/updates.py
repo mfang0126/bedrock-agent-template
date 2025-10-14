@@ -5,6 +5,7 @@ Refactored to use dependency injection for authentication.
 """
 
 import re
+from typing import Any, Dict, Optional
 import httpx
 from strands import tool
 
@@ -36,7 +37,7 @@ class JiraUpdateTools:
         self.auth = auth
 
     @tool
-    async def update_jira_status(self, ticket_id: str, status: str) -> str:
+    async def update_jira_status(self, ticket_id: str, status: str) -> Dict[str, Any]:
         """Update JIRA ticket status.
 
         Args:
@@ -44,14 +45,22 @@ class JiraUpdateTools:
             status: New status (e.g., "In Progress", "Done")
 
         Returns:
-            Success or error message
+            Dictionary with success, data (transition details), and message
         """
         # Validate ticket ID
         if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
-            return f"❌ Invalid ticket ID format: {ticket_id}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Invalid ticket ID format: {ticket_id}"
+            }
 
         if not status:
-            return "❌ Status cannot be empty"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Status cannot be empty"
+            }
 
         try:
             # Get authentication from injected auth
@@ -67,7 +76,11 @@ class JiraUpdateTools:
                 )
 
                 if transitions_response.status_code != 200:
-                    return f"❌ Error fetching transitions: {transitions_response.status_code}"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ Error fetching transitions: {transitions_response.status_code}"
+                    }
 
                 transitions = transitions_response.json().get("transitions", [])
 
@@ -82,7 +95,11 @@ class JiraUpdateTools:
 
                 if not transition_id:
                     available = [t["name"] for t in transitions]
-                    return f"❌ Cannot transition to '{status}'. Available transitions: {', '.join(available)}"
+                    return {
+                        "success": False,
+                        "data": {"available_transitions": available},
+                        "message": f"❌ Cannot transition to '{status}'. Available transitions: {', '.join(available)}"
+                    }
 
                 # Execute transition
                 response = await client.post(
@@ -93,17 +110,37 @@ class JiraUpdateTools:
                 )
 
                 if response.status_code == 204:
-                    return f"✅ Ticket {ticket_id} moved to '{transition_name}'"
+                    return {
+                        "success": True,
+                        "data": {
+                            "ticket_id": ticket_id,
+                            "new_status": transition_name,
+                            "transition_id": transition_id
+                        },
+                        "message": f"✅ Ticket {ticket_id} moved to '{transition_name}'"
+                    }
                 else:
-                    return f"❌ Error updating status: {response.status_code} - {response.text}"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ Error updating status: {response.status_code} - {response.text}"
+                    }
 
         except httpx.TimeoutException:
-            return "❌ Request timed out"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Request timed out"
+            }
         except Exception as e:
-            return f"❌ Error: {str(e)}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Error: {str(e)}"
+            }
 
     @tool
-    async def add_jira_comment(self, ticket_id: str, comment: str, github_url: str = None) -> str:
+    async def add_jira_comment(self, ticket_id: str, comment: str, github_url: Optional[str] = None) -> Dict[str, Any]:
         """Add comment to JIRA ticket.
 
         Args:
@@ -112,14 +149,22 @@ class JiraUpdateTools:
             github_url: Optional GitHub issue/PR URL to include
 
         Returns:
-            Success or error message
+            Dictionary with success, data (comment details), and message
         """
         # Validate inputs
         if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
-            return f"❌ Invalid ticket ID format: {ticket_id}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Invalid ticket ID format: {ticket_id}"
+            }
 
         if not comment:
-            return "❌ Comment cannot be empty"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Comment cannot be empty"
+            }
 
         try:
             # Get authentication from injected auth
@@ -160,17 +205,39 @@ class JiraUpdateTools:
                 )
 
                 if response.status_code == 201:
-                    return f"✅ Comment added to {ticket_id}"
+                    comment_data = response.json()
+                    return {
+                        "success": True,
+                        "data": {
+                            "ticket_id": ticket_id,
+                            "comment_id": comment_data.get("id"),
+                            "comment": comment,
+                            "github_url": github_url
+                        },
+                        "message": f"✅ Comment added to {ticket_id}"
+                    }
                 else:
-                    return f"❌ Error adding comment: {response.status_code} - {response.text}"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ Error adding comment: {response.status_code} - {response.text}"
+                    }
 
         except httpx.TimeoutException:
-            return "❌ Request timed out"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Request timed out"
+            }
         except Exception as e:
-            return f"❌ Error: {str(e)}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Error: {str(e)}"
+            }
 
     @tool
-    async def link_github_issue(self, ticket_id: str, github_url: str) -> str:
+    async def link_github_issue(self, ticket_id: str, github_url: str) -> Dict[str, Any]:
         """Link GitHub issue/PR to JIRA ticket.
 
         Args:
@@ -178,14 +245,22 @@ class JiraUpdateTools:
             github_url: GitHub issue or PR URL
 
         Returns:
-            Success or error message
+            Dictionary with success, data (link details), and message
         """
         # Validate inputs
         if not ticket_id or not re.match(r'^[A-Z]{2,10}-\d+$', ticket_id):
-            return f"❌ Invalid ticket ID format: {ticket_id}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Invalid ticket ID format: {ticket_id}"
+            }
 
         if not github_url or "github.com" not in github_url:
-            return "❌ Invalid GitHub URL"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Invalid GitHub URL"
+            }
 
         try:
             # Get authentication from injected auth
@@ -217,11 +292,33 @@ class JiraUpdateTools:
                 )
 
                 if response.status_code == 201:
-                    return f"✅ Linked GitHub to {ticket_id}: {github_url}"
+                    link_data = response.json()
+                    return {
+                        "success": True,
+                        "data": {
+                            "ticket_id": ticket_id,
+                            "github_url": github_url,
+                            "link_id": link_data.get("id"),
+                            "link_type": github_title
+                        },
+                        "message": f"✅ Linked GitHub to {ticket_id}: {github_url}"
+                    }
                 else:
-                    return f"❌ Error linking: {response.status_code} - {response.text}"
+                    return {
+                        "success": False,
+                        "data": {},
+                        "message": f"❌ Error linking: {response.status_code} - {response.text}"
+                    }
 
         except httpx.TimeoutException:
-            return "❌ Request timed out"
+            return {
+                "success": False,
+                "data": {},
+                "message": "❌ Request timed out"
+            }
         except Exception as e:
-            return f"❌ Error: {str(e)}"
+            return {
+                "success": False,
+                "data": {},
+                "message": f"❌ Error: {str(e)}"
+            }

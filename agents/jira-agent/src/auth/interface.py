@@ -1,19 +1,25 @@
-"""Jira Authentication Interface - Abstract base for dependency injection.
+"""Jira Authentication Interface - Protocol-based for dependency injection.
 
 This module defines the interface for Jira authentication implementations,
 enabling both local testing (mock) and production deployment (OAuth).
 """
 
-from abc import ABC, abstractmethod
+from typing import Protocol, runtime_checkable
 
 
-class JiraAuth(ABC):
-    """Abstract interface for Jira authentication.
+@runtime_checkable
 
-    This interface enables dependency injection, allowing different
-    authentication implementations for different environments:
+
+class JiraAuth(Protocol):
+    """Protocol interface for Jira authentication.
+
+    This protocol enables dependency injection through structural subtyping,
+    allowing different authentication implementations for different environments:
     - MockJiraAuth: For local testing without OAuth
     - AgentCoreJiraAuth: For production with OAuth 2.0
+
+    Any class implementing these methods satisfies the protocol, enabling
+    flexible authentication strategies without explicit inheritance.
 
     Example:
         >>> # Local testing
@@ -25,7 +31,6 @@ class JiraAuth(ABC):
         >>> token = await auth.get_token()  # Triggers OAuth if needed
     """
 
-    @abstractmethod
     async def get_token(self) -> str:
         """Get Jira access token.
 
@@ -35,18 +40,16 @@ class JiraAuth(ABC):
         Raises:
             Exception: If authentication fails
         """
-        pass
+        ...
 
-    @abstractmethod
     def is_authenticated(self) -> bool:
         """Check if currently authenticated.
 
         Returns:
             True if token is available, False otherwise
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_jira_url(self) -> str:
         """Get Jira API base URL.
 
@@ -56,9 +59,8 @@ class JiraAuth(ABC):
         Returns:
             Jira API base URL
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_auth_headers(self) -> dict:
         """Get authentication headers for HTTP requests.
 
@@ -68,4 +70,4 @@ class JiraAuth(ABC):
         Raises:
             Exception: If not authenticated
         """
-        pass
+        ...

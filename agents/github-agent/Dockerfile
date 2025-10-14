@@ -10,7 +10,7 @@ ENV UV_SYSTEM_PYTHON=1 \
     AWS_REGION=ap-southeast-2 \
     AWS_DEFAULT_REGION=ap-southeast-2
 
-# Copy project files (respecting .dockerignore)
+# Copy agent files (respecting .dockerignore)
 COPY . .
 
 # Install dependencies from pyproject.toml
