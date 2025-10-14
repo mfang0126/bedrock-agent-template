@@ -10,6 +10,24 @@ from typing import Dict, Optional
 from dotenv import load_dotenv
 
 
+def get_environment() -> str:
+    """Get current environment from AGENT_ENV variable.
+
+    Returns:
+        str: "local", "dev", or "prod" (defaults to "prod" if not set)
+
+    Example:
+        >>> os.environ["AGENT_ENV"] = "local"
+        >>> get_environment()
+        'local'
+    """
+    env = os.getenv("AGENT_ENV", "prod").lower()
+    if env not in ["local", "dev", "prod"]:
+        print(f"⚠️ Invalid AGENT_ENV: {env}, defaulting to 'prod'")
+        return "prod"
+    return env
+
+
 class Config:
     """Configuration manager for multi-agent platform."""
 

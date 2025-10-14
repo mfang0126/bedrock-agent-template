@@ -22,13 +22,20 @@ wheels/
 MANIFEST
 
 # Virtual environments
-.env
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Environment configuration
+.env
+.env.local
+.env.dev
+.env.prod
+# Keep .env.example in version control
+!.env.example
 
 # IDE
 .vscode/

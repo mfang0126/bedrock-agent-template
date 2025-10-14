@@ -1,62 +1,19 @@
 """GitHub Agent Runtime - AgentCore deployment entrypoint.
 
-This module follows the notebook pattern for AWS Bedrock AgentCore Runtime deployment.
+This module is a thin wrapper around the pure agent logic, handling only
+AgentCore-specific concerns like OAuth URL streaming and runtime integration.
 """
 
-import sys
-from pathlib import Path
-
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+import asyncio
+import os
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
-from strands import Agent
-from strands.models import BedrockModel
 
-from src.tools.issues import (
-    close_github_issue,
-    create_github_issue,
-    list_github_issues,
-    post_github_comment,
-    update_github_issue,
-)
-from src.tools.pull_requests import (
-    create_pull_request,
-    list_pull_requests,
-    merge_pull_request,
-)
-
-# Import tools
-from src.tools.repos import create_github_repo, get_repo_info, list_github_repos
+from src.agent import create_github_agent
+from src.auth import get_auth_provider
 
 # Create AgentCore app
 app = BedrockAgentCoreApp()
-
-# Model configuration (Claude 3.5 Sonnet for Sydney region)
-MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
-REGION = "ap-southeast-2"  # Sydney
-
-# Create Bedrock model
-model = BedrockModel(model_id=MODEL_ID, region_name=REGION)
-
-# Create GitHub agent
-agent = Agent(
-    model=model,
-    tools=[
-        list_github_repos,
-        get_repo_info,
-        create_github_repo,
-        list_github_issues,
-        create_github_issue,
-        close_github_issue,
-        post_github_comment,
-        update_github_issue,
-        create_pull_request,
-        list_pull_requests,
-        merge_pull_request,
-    ],
-    system_prompt="""You are a GitHub assistant. Use your tools to help users with repositories, issues, and pull requests. Authentication is automatic - never ask for tokens.""",
-)
 
 
 @app.entrypoint
@@ -64,6 +21,7 @@ async def strands_agent_github(payload):
     """AgentCore Runtime entrypoint with streaming support.
 
     This function is called by AgentCore Runtime when the agent is invoked.
+    It handles OAuth URL streaming and delegates agent logic to the factory.
 
     IMPORTANT: OAuth URLs are streamed back immediately when generated via callback.
 
@@ -73,9 +31,6 @@ async def strands_agent_github(payload):
     Yields:
         Streaming agent response events or OAuth URL
     """
-    import asyncio
-
-    from src.common import auth
     from src.common.utils import (
         AgentResponse,
         clean_json_response,
@@ -104,8 +59,15 @@ async def strands_agent_github(payload):
         except Exception as e:
             print(f"⚠️ Error queuing OAuth URL: {e}")
 
-    # Register callback to capture OAuth URL immediately
-    auth.oauth_url_callback = stream_oauth_url_callback
+    # Get environment (local, dev, prod)
+    env = os.getenv("AGENT_ENV", "prod")
+    print(f"🌍 Environment: {env}")
+
+    # Get appropriate auth provider with OAuth callback
+    auth = get_auth_provider(env=env, oauth_url_callback=stream_oauth_url_callback)
+
+    # Create GitHub agent with auth injection
+    agent = create_github_agent(auth)
 
     # Initialize GitHub OAuth - this will trigger OAuth flow if no token exists
     print("🔐 Initializing GitHub authentication...")
@@ -136,7 +98,7 @@ async def strands_agent_github(payload):
             return None
 
     # Start authentication and OAuth URL monitoring concurrently
-    auth_task = asyncio.create_task(auth.get_github_access_token())
+    auth_task = asyncio.create_task(auth.get_token())
     oauth_monitor_task = asyncio.create_task(monitor_oauth_queue())
 
     # Wait for either authentication to complete or OAuth URL to be generated
@@ -169,11 +131,14 @@ async def strands_agent_github(payload):
         print(f"⚠️ GitHub authentication pending or failed: {e}")
 
         # Fallback: Check if OAuth URL was set but not streamed
-        if auth.pending_oauth_url and not oauth_url_received:
-            oauth_message = create_oauth_message(auth.pending_oauth_url)
-            # Yield OAuth URL
-            yield format_client_text(oauth_message)
-            return
+        # (for AgentCore auth implementation)
+        if hasattr(auth, 'get_pending_oauth_url'):
+            pending_url = auth.get_pending_oauth_url()
+            if pending_url and not oauth_url_received:
+                oauth_message = create_oauth_message(pending_url)
+                # Yield OAuth URL
+                yield format_client_text(oauth_message)
+                return
 
     # OAuth successful, proceed with agent streaming
     print("🚀 Processing GitHub request with streaming...")

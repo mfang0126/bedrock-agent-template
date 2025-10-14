@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "github-agent"
 version = "0.1.0"
 description = "GitHub integration agent for multi-agent platform"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
     "bedrock-agentcore[strands-agents]>=0.1.0",
     "bedrock-agentcore-starter-toolkit>=0.1.0",
