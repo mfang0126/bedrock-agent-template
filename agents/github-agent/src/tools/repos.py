@@ -1,73 +1,61 @@
-"""GitHub repository tools with function factories and closures.
+"""GitHub repository tools - Following notebook pattern.
 
-These tools use function factories with closures for auth injection,
-following Strands best practices for stateless operations.
+These tools make direct API calls using httpx and the global access token
+from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the global github_access_token that is set by the entrypoint.
 """
 
+import sys
+from pathlib import Path
+
 import httpx
-from collections.abc import Sequence
-from typing import Callable
 from strands import tool
 
-from src.auth import GitHubAuth
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Import auth module (not the variable directly!)
+from src.common import auth as github_auth
 
 
-def github_repo_tools(auth: GitHubAuth) -> Sequence[Callable]:
-    """Factory returns repository tools with auth in closure.
-
-    Args:
-        auth: GitHubAuth implementation (mock or real OAuth)
+@tool
+def list_github_repos() -> str:
+    """List user's GitHub repositories.
 
     Returns:
-        Sequence of tool functions with auth captured in closure
+        Formatted string with repository information
     """
+    # Access token via module attribute (not direct import)
+    access_token = github_auth.github_access_token
 
-    async def _api_call(method: str, endpoint: str, **kwargs) -> dict:
-        """Shared async HTTP helper - DRY principle.
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
 
-        Args:
-            method: HTTP method (get, post, patch, etc.)
-            endpoint: API endpoint (e.g., "/user/repos")
-            **kwargs: Additional arguments for httpx request
+    print(f"🔍 Fetching GitHub repositories...")
+    print(f"🔑 Using access token: {access_token[:20]}...")
 
-        Returns:
-            JSON response as dict
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-        Raises:
-            httpx.HTTPStatusError: On API errors
-        """
-        token = await auth.get_token()
-        async with httpx.AsyncClient() as client:
-            response = await getattr(client, method)(
-                f"https://api.github.com{endpoint}",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=30.0,
-                **kwargs
-            )
-            response.raise_for_status()
-            return response.json()
-
-    @tool
-    async def list_github_repos() -> str:
-        """List user's GitHub repositories.
-
-        Returns:
-            Formatted string with repository information
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
-
-        try:
+    try:
+        with httpx.Client() as client:
             # Get user information
-            user_data = await _api_call("get", "/user")
-            username = user_data.get("login", "Unknown")
+            user_response = client.get(
+                "https://api.github.com/user", headers=headers, timeout=30.0
+            )
+            user_response.raise_for_status()
+            username = user_response.json().get("login", "Unknown")
             print(f"✅ User: {username}")
 
             # Search for user's repositories
-            repos_data = await _api_call(
-                "get",
-                f"/search/repositories?q=user:{username}"
+            repos_response = client.get(
+                f"https://api.github.com/search/repositories?q=user:{username}",
+                headers=headers,
+                timeout=30.0,
             )
+            repos_response.raise_for_status()
+            repos_data = repos_response.json()
             print(f"✅ Found {len(repos_data.get('items', []))} repositories")
 
             repos = repos_data.get("items", [])
@@ -82,35 +70,52 @@ def github_repo_tools(auth: GitHubAuth) -> Sequence[Callable]:
             # Minimal plain text format
             repo_names = [repo["name"] for repo in repos]
 
-            return f"You have {total_count} repositories. First 3: {', '.join(repo_names)}"
+            return (
+                f"You have {total_count} repositories. First 3: {', '.join(repo_names)}"
+            )
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error fetching GitHub repositories: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error fetching GitHub repositories: {str(e)}"
 
-    @tool
-    async def get_repo_info(repo_name: str) -> str:
-        """Get detailed information about a specific repository.
 
-        Args:
-            repo_name: Repository name (format: owner/repo or just repo for user's own)
+@tool
+def get_repo_info(repo_name: str) -> str:
+    """Get detailed information about a specific repository.
 
-        Returns:
-            Detailed repository information
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo or just repo for user's own)
 
-        try:
+    Returns:
+        Detailed repository information
+    """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        with httpx.Client() as client:
             # If no owner specified, get current user's repo
             if "/" not in repo_name:
-                user_data = await _api_call("get", "/user")
-                username = user_data.get("login")
+                user_response = client.get(
+                    "https://api.github.com/user", headers=headers, timeout=30.0
+                )
+                user_response.raise_for_status()
+                username = user_response.json().get("login")
                 repo_name = f"{username}/{repo_name}"
 
             # Get repository information
-            repo = await _api_call("get", f"/repos/{repo_name}")
+            repo_response = client.get(
+                f"https://api.github.com/repos/{repo_name}",
+                headers=headers,
+                timeout=30.0,
+            )
+            repo_response.raise_for_status()
+            repo = repo_response.json()
 
             # Format repository details
             result = f"""Repository: {repo['name']}
@@ -140,32 +145,41 @@ URL: {repo['html_url']}
 
             return result
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error fetching repository info: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error fetching repository info: {str(e)}"
 
-    @tool
-    async def create_github_repo(name: str, description: str = "", private: bool = False) -> str:
-        """Create a new GitHub repository.
 
-        Args:
-            name: Repository name
-            description: Repository description
-            private: Whether the repository should be private
+@tool
+def create_github_repo(name: str, description: str = "", private: bool = False) -> str:
+    """Create a new GitHub repository.
 
-        Returns:
-            Success message with repository details
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        name: Repository name
+        description: Repository description
+        private: Whether the repository should be private
 
-        try:
-            repo = await _api_call(
-                "post",
-                "/user/repos",
-                json={"name": name, "description": description, "private": private}
+    Returns:
+        Success message with repository details
+    """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        with httpx.Client() as client:
+            response = client.post(
+                "https://api.github.com/user/repos",
+                headers=headers,
+                json={"name": name, "description": description, "private": private},
+                timeout=30.0,
             )
+            response.raise_for_status()
+            repo = response.json()
 
             visibility = "private" if private else "public"
             return f"""✅ Repository created successfully!
@@ -176,9 +190,7 @@ URL: {repo['html_url']}
 
 Repository is ready to use!"""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error creating repository: {str(e)}"
-
-    return [list_github_repos, get_repo_info, create_github_repo]
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error creating repository: {str(e)}"

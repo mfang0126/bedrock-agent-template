@@ -1,92 +1,73 @@
-"""GitHub pull request tools with function factories and closures.
+"""GitHub pull request tools - Following notebook pattern.
 
-These tools use function factories with closures for auth injection,
-following Strands best practices for stateless operations.
+These tools make direct API calls using httpx and the global access token
+from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the global github_access_token that is set by the entrypoint.
 """
 
+import sys
+from pathlib import Path
+
 import httpx
-from collections.abc import Sequence
-from typing import Callable
 from strands import tool
 
-from src.auth import GitHubAuth
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Import auth module (not the variable directly!)
+from src.common import auth as github_auth
 
 
-def github_pr_tools(auth: GitHubAuth) -> Sequence[Callable]:
-    """Factory returns pull request tools with auth in closure.
+@tool
+def create_pull_request(
+    repo_name: str,
+    title: str,
+    head_branch: str,
+    base_branch: str = "main",
+    body: str = "",
+    draft: bool = False,
+) -> str:
+    """Create a new pull request in a GitHub repository.
 
     Args:
-        auth: GitHubAuth implementation (mock or real OAuth)
+        repo_name: Repository name (format: owner/repo)
+        title: PR title
+        head_branch: Branch with changes
+        base_branch: Target branch (default: "main")
+        body: PR description/body
+        draft: Create as draft PR
 
     Returns:
-        Sequence of tool functions with auth captured in closure
+        Success message with PR details
     """
+    access_token = github_auth.github_access_token
 
-    async def _api_call(method: str, endpoint: str, **kwargs) -> dict:
-        """Shared async HTTP helper - DRY principle.
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
 
-        Args:
-            method: HTTP method (get, post, patch, put, etc.)
-            endpoint: API endpoint (e.g., "/repos/owner/repo/pulls")
-            **kwargs: Additional arguments for httpx request
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-        Returns:
-            JSON response as dict
+    # Prepare PR data
+    pr_data = {
+        "title": title,
+        "head": head_branch,
+        "base": base_branch,
+        "body": body,
+        "draft": draft,
+    }
 
-        Raises:
-            httpx.HTTPStatusError: On API errors
-        """
-        token = await auth.get_token()
-        async with httpx.AsyncClient() as client:
-            response = await getattr(client, method)(
-                f"https://api.github.com{endpoint}",
-                headers={"Authorization": f"Bearer {token}"},
+    try:
+        with httpx.Client() as client:
+            response = client.post(
+                f"https://api.github.com/repos/{repo_name}/pulls",
+                headers=headers,
+                json=pr_data,
                 timeout=30.0,
-                **kwargs
             )
             response.raise_for_status()
-            return response.json()
-
-    @tool
-    async def create_pull_request(
-        repo_name: str,
-        title: str,
-        head_branch: str,
-        base_branch: str = "main",
-        body: str = "",
-        draft: bool = False,
-    ) -> str:
-        """Create a new pull request in a GitHub repository.
-
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            title: PR title
-            head_branch: Branch with changes
-            base_branch: Target branch (default: "main")
-            body: PR description/body
-            draft: Create as draft PR
-
-        Returns:
-            Success message with PR details
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
-
-        # Prepare PR data
-        pr_data = {
-            "title": title,
-            "head": head_branch,
-            "base": base_branch,
-            "body": body,
-            "draft": draft,
-        }
-
-        try:
-            pr = await _api_call(
-                "post",
-                f"/repos/{repo_name}/pulls",
-                json=pr_data
-            )
+            pr = response.json()
 
             draft_status = " (Draft)" if draft else ""
             return f"""✅ Pull request created successfully!
@@ -100,31 +81,40 @@ Description:
 
 🔗 {pr['html_url']}"""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error creating pull request: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error creating pull request: {str(e)}"
 
-    @tool
-    async def list_pull_requests(repo_name: str, state: str = "open") -> str:
-        """List pull requests in a GitHub repository.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            state: PR state - "open", "closed", or "all"
+@tool
+def list_pull_requests(repo_name: str, state: str = "open") -> str:
+    """List pull requests in a GitHub repository.
 
-        Returns:
-            Formatted string with PR information
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        state: PR state - "open", "closed", or "all"
 
-        try:
-            prs = await _api_call(
-                "get",
-                f"/repos/{repo_name}/pulls",
-                params={"state": state}
+    Returns:
+        Formatted string with PR information
+    """
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        with httpx.Client() as client:
+            response = client.get(
+                f"https://api.github.com/repos/{repo_name}/pulls",
+                headers=headers,
+                params={"state": state},
+                timeout=30.0,
             )
+            response.raise_for_status()
+            prs = response.json()
 
             if not prs:
                 return f"No {state} pull requests found in {repo_name}."
@@ -156,45 +146,56 @@ Description:
             result_lines.append(f"Total: {len(prs)} {state} pull requests")
             return "\n".join(result_lines)
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error fetching pull requests: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error fetching pull requests: {str(e)}"
 
-    @tool
-    async def merge_pull_request(
-        repo_name: str, pr_number: int, merge_method: str = "merge"
-    ) -> str:
-        """Merge a pull request in a GitHub repository.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            pr_number: PR number to merge
-            merge_method: Merge method - "merge", "squash", or "rebase"
+@tool
+def merge_pull_request(
+    repo_name: str, pr_number: int, merge_method: str = "merge"
+) -> str:
+    """Merge a pull request in a GitHub repository.
 
-        Returns:
-            Success message
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        pr_number: PR number to merge
+        merge_method: Merge method - "merge", "squash", or "rebase"
 
-        # Validate merge method
-        if merge_method not in ["merge", "squash", "rebase"]:
-            return "❌ Invalid merge method. Use 'merge', 'squash', or 'rebase'."
+    Returns:
+        Success message
+    """
+    access_token = github_auth.github_access_token
 
-        try:
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Validate merge method
+    if merge_method not in ["merge", "squash", "rebase"]:
+        return "❌ Invalid merge method. Use 'merge', 'squash', or 'rebase'."
+
+    try:
+        with httpx.Client() as client:
             # Get PR details first
-            pr = await _api_call(
-                "get",
-                f"/repos/{repo_name}/pulls/{pr_number}"
+            pr_response = client.get(
+                f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}",
+                headers=headers,
+                timeout=30.0,
             )
+            pr_response.raise_for_status()
+            pr = pr_response.json()
 
             # Merge the PR
-            await _api_call(
-                "put",
-                f"/repos/{repo_name}/pulls/{pr_number}/merge",
-                json={"merge_method": merge_method}
+            merge_response = client.put(
+                f"https://api.github.com/repos/{repo_name}/pulls/{pr_number}/merge",
+                headers=headers,
+                json={"merge_method": merge_method},
+                timeout=30.0,
             )
+            merge_response.raise_for_status()
 
             return f"""✅ Pull request merged successfully!
 
@@ -206,9 +207,7 @@ Status: Merged
 
 The changes have been merged into {pr['base']['ref']}."""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error merging pull request: {str(e)}"
-
-    return [create_pull_request, list_pull_requests, merge_pull_request]
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error merging pull request: {str(e)}"

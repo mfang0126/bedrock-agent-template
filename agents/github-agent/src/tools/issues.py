@@ -1,72 +1,55 @@
-"""GitHub issues tools with function factories and closures.
+"""GitHub issues tools - Following notebook pattern.
 
-These tools use function factories with closures for auth injection,
-following Strands best practices for stateless operations.
+These tools make direct API calls using httpx and the global access token
+from the auth module.
+
+KEY PATTERN: Tools DO NOT have @requires_access_token decorator.
+They reference the github_access_token that is set by the entrypoint.
 """
 
+import sys
+from pathlib import Path
+
 import httpx
-from collections.abc import Sequence
-from typing import Callable
 from strands import tool
 
-from src.auth import GitHubAuth
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Import auth module (not the variable directly!)
+from src.common import auth as github_auth
 
 
-def github_issue_tools(auth: GitHubAuth) -> Sequence[Callable]:
-    """Factory returns issue tools with auth in closure.
+@tool
+def list_github_issues(repo_name: str, state: str = "open") -> str:
+    """List issues in a GitHub repository.
 
     Args:
-        auth: GitHubAuth implementation (mock or real OAuth)
+        repo_name: Repository name (format: owner/repo)
+        state: Issue state - "open", "closed", or "all"
 
     Returns:
-        Sequence of tool functions with auth captured in closure
+        Formatted string with issue information
     """
+    # Access token via module
 
-    async def _api_call(method: str, endpoint: str, **kwargs) -> dict:
-        """Shared async HTTP helper - DRY principle.
+    access_token = github_auth.github_access_token
 
-        Args:
-            method: HTTP method (get, post, patch, etc.)
-            endpoint: API endpoint (e.g., "/repos/owner/repo/issues")
-            **kwargs: Additional arguments for httpx request
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
 
-        Returns:
-            JSON response as dict
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-        Raises:
-            httpx.HTTPStatusError: On API errors
-        """
-        token = await auth.get_token()
-        async with httpx.AsyncClient() as client:
-            response = await getattr(client, method)(
-                f"https://api.github.com{endpoint}",
-                headers={"Authorization": f"Bearer {token}"},
+    try:
+        with httpx.Client() as client:
+            response = client.get(
+                f"https://api.github.com/repos/{repo_name}/issues",
+                headers=headers,
+                params={"state": state},
                 timeout=30.0,
-                **kwargs
             )
             response.raise_for_status()
-            return response.json()
-
-    @tool
-    async def list_github_issues(repo_name: str, state: str = "open") -> str:
-        """List issues in a GitHub repository.
-
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            state: Issue state - "open", "closed", or "all"
-
-        Returns:
-            Formatted string with issue information
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
-
-        try:
-            issues = await _api_call(
-                "get",
-                f"/repos/{repo_name}/issues",
-                params={"state": state}
-            )
+            issues = response.json()
 
             if not issues:
                 return f"No {state} issues found in {repo_name}."
@@ -94,43 +77,54 @@ def github_issue_tools(auth: GitHubAuth) -> Sequence[Callable]:
             result_lines.append(f"Total: {len(issues)} {state} issues")
             return "\n".join(result_lines)
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error fetching issues: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error fetching issues: {str(e)}"
 
-    @tool
-    async def create_github_issue(
-        repo_name: str, title: str, body: str = "", labels: str = ""
-    ) -> str:
-        """Create a new issue in a GitHub repository.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            title: Issue title
-            body: Issue description/body
-            labels: Comma-separated list of labels
+@tool
+def create_github_issue(
+    repo_name: str, title: str, body: str = "", labels: str = ""
+) -> str:
+    """Create a new issue in a GitHub repository.
 
-        Returns:
-            Success message with issue details
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        title: Issue title
+        body: Issue description/body
+        labels: Comma-separated list of labels
 
-        # Prepare issue data
-        issue_data = {"title": title, "body": body}
+    Returns:
+        Success message with issue details
+    """
+    # Access token via module
 
-        # Parse labels
-        if labels:
-            label_list = [label.strip() for label in labels.split(",")]
-            issue_data["labels"] = label_list
+    access_token = github_auth.github_access_token
 
-        try:
-            issue = await _api_call(
-                "post",
-                f"/repos/{repo_name}/issues",
-                json=issue_data
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Prepare issue data
+    issue_data = {"title": title, "body": body}
+
+    # Parse labels
+    if labels:
+        label_list = [label.strip() for label in labels.split(",")]
+        issue_data["labels"] = label_list
+
+    try:
+        with httpx.Client() as client:
+            response = client.post(
+                f"https://api.github.com/repos/{repo_name}/issues",
+                headers=headers,
+                json=issue_data,
+                timeout=30.0,
             )
+            response.raise_for_status()
+            issue = response.json()
 
             labels_str = ""
             if issue.get("labels"):
@@ -147,31 +141,42 @@ def github_issue_tools(auth: GitHubAuth) -> Sequence[Callable]:
 
 🔗 {issue['html_url']}"""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error creating issue: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error creating issue: {str(e)}"
 
-    @tool
-    async def close_github_issue(repo_name: str, issue_number: int) -> str:
-        """Close an issue in a GitHub repository.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            issue_number: Issue number to close
+@tool
+def close_github_issue(repo_name: str, issue_number: int) -> str:
+    """Close an issue in a GitHub repository.
 
-        Returns:
-            Success message
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        issue_number: Issue number to close
 
-        try:
-            issue = await _api_call(
-                "patch",
-                f"/repos/{repo_name}/issues/{issue_number}",
-                json={"state": "closed"}
+    Returns:
+        Success message
+    """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        with httpx.Client() as client:
+            response = client.patch(
+                f"https://api.github.com/repos/{repo_name}/issues/{issue_number}",
+                headers=headers,
+                json={"state": "closed"},
+                timeout=30.0,
             )
+            response.raise_for_status()
+            issue = response.json()
 
             return f"""✅ Issue closed successfully!
 
@@ -182,32 +187,43 @@ Status: Closed
 
 The issue has been marked as resolved."""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error closing issue: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error closing issue: {str(e)}"
 
-    @tool
-    async def post_github_comment(repo_name: str, issue_number: int, comment: str) -> str:
-        """Post a comment on a GitHub issue.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            issue_number: Issue number to comment on
-            comment: Comment text (supports markdown)
+@tool
+def post_github_comment(repo_name: str, issue_number: int, comment: str) -> str:
+    """Post a comment on a GitHub issue.
 
-        Returns:
-            Success message with comment details
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        issue_number: Issue number to comment on
+        comment: Comment text (supports markdown)
 
-        try:
-            comment_data = await _api_call(
-                "post",
-                f"/repos/{repo_name}/issues/{issue_number}/comments",
-                json={"body": comment}
+    Returns:
+        Success message with comment details
+    """
+    # Access token via module
+
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        with httpx.Client() as client:
+            response = client.post(
+                f"https://api.github.com/repos/{repo_name}/issues/{issue_number}/comments",
+                headers=headers,
+                json={"body": comment},
+                timeout=30.0,
             )
+            response.raise_for_status()
+            comment_data = response.json()
 
             return f"""✅ Comment posted successfully!
 
@@ -220,56 +236,67 @@ Author: {comment_data['user']['login']}
 
 🔗 {comment_data['html_url']}"""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error posting comment: {str(e)}"
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error posting comment: {str(e)}"
 
-    @tool
-    async def update_github_issue(
-        repo_name: str,
-        issue_number: int,
-        state: str = None,
-        labels: str = None,
-        assignees: str = None,
-    ) -> str:
-        """Update an issue's state, labels, or assignees.
 
-        Args:
-            repo_name: Repository name (format: owner/repo)
-            issue_number: Issue number to update
-            state: Issue state - "open" or "closed" (optional)
-            labels: Comma-separated list of labels (optional)
-            assignees: Comma-separated list of usernames (optional)
+@tool
+def update_github_issue(
+    repo_name: str,
+    issue_number: int,
+    state: str = None,
+    labels: str = None,
+    assignees: str = None,
+) -> str:
+    """Update an issue's state, labels, or assignees.
 
-        Returns:
-            Success message with updated issue details
-        """
-        if not auth.is_authenticated():
-            return "❌ GitHub authentication required. Please authenticate first."
+    Args:
+        repo_name: Repository name (format: owner/repo)
+        issue_number: Issue number to update
+        state: Issue state - "open" or "closed" (optional)
+        labels: Comma-separated list of labels (optional)
+        assignees: Comma-separated list of usernames (optional)
 
-        # Build update payload
-        update_data = {}
-        if state:
-            update_data["state"] = state
-        if labels:
-            update_data["labels"] = [label.strip() for label in labels.split(",")]
-        if assignees:
-            update_data["assignees"] = [
-                assignee.strip() for assignee in assignees.split(",")
-            ]
+    Returns:
+        Success message with updated issue details
+    """
+    # Access token via module
 
-        if not update_data:
-            return (
-                "❌ No updates provided. Specify at least one of: state, labels, assignees."
+    access_token = github_auth.github_access_token
+
+    if not access_token:
+        return "❌ GitHub authentication required. Please contact support."
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Build update payload
+    update_data = {}
+    if state:
+        update_data["state"] = state
+    if labels:
+        update_data["labels"] = [label.strip() for label in labels.split(",")]
+    if assignees:
+        update_data["assignees"] = [
+            assignee.strip() for assignee in assignees.split(",")
+        ]
+
+    if not update_data:
+        return (
+            "❌ No updates provided. Specify at least one of: state, labels, assignees."
+        )
+
+    try:
+        with httpx.Client() as client:
+            response = client.patch(
+                f"https://api.github.com/repos/{repo_name}/issues/{issue_number}",
+                headers=headers,
+                json=update_data,
+                timeout=30.0,
             )
-
-        try:
-            issue = await _api_call(
-                "patch",
-                f"/repos/{repo_name}/issues/{issue_number}",
-                json=update_data
-            )
+            response.raise_for_status()
+            issue = response.json()
 
             # Format response
             updates = []
@@ -293,15 +320,7 @@ Updates:
 
 🔗 {issue['html_url']}"""
 
-        except httpx.HTTPStatusError as e:
-            return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
-        except Exception as e:
-            return f"❌ Error updating issue: {str(e)}"
-
-    return [
-        list_github_issues,
-        create_github_issue,
-        close_github_issue,
-        post_github_comment,
-        update_github_issue,
-    ]
+    except httpx.HTTPStatusError as e:
+        return f"❌ GitHub API error: {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        return f"❌ Error updating issue: {str(e)}"

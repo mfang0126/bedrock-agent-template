@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: github-Hn7UKwBMRj
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/github-Hn7UKwBMRj
-      agent_session_id: ec459a01-6323-4613-990b-a8c8e622394a
+      agent_session_id: e3e1c0a8-49b0-4ba2-8197-f2addb41a360
     codebuild:
       project_name: bedrock-agentcore-github-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
@@ -36,6 +36,6 @@ agents:
     authorizer_configuration: null
     request_header_configuration: null
     oauth_configuration:
-      workload_name: github-agent-workload
+      workload_name: github-Hn7UKwBMRj
       credential_providers:
       - github-provider
