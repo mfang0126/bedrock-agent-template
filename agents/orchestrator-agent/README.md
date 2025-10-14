@@ -77,25 +77,25 @@ For a request like "Check dependencies for my project", the orchestrator:
 ### Standalone Test
 Test the orchestrator logic without dependencies:
 ```bash
-python test_standalone.py
+uv run test_standalone.py
 ```
 
 ### Full Test Suite
 Run complete agent coordination tests:
 ```bash
-python test_orchestrator.py
+uv run test_orchestrator.py
 ```
 
 ### Grab-YouTube Example
 Test with your specific project:
 ```bash
-python example_grab_youtube.py
+uv run example_grab_youtube.py
 ```
 
 ### Custom Prompt
 Test with any prompt:
 ```bash
-python test_orchestrator.py "Your custom task here"
+uv run test_orchestrator.py "Your custom task here"
 ```
 
 ## Installation

@@ -74,18 +74,18 @@ This ensures compatibility regardless of how agents are deployed.
 ### Test the Orchestrator
 ```bash
 cd agents/orchestrator-agent
-python test_standalone.py  # Test without dependencies
-python test_orchestrator.py  # Full test suite
+uv run test_standalone.py  # Test without dependencies
+uv run test_orchestrator.py  # Full test suite
 ```
 
 ### Run Grab-YouTube Example
 ```bash
-python example_grab_youtube.py
+uv run example_grab_youtube.py
 ```
 
 ### Custom Task
 ```bash
-python test_orchestrator.py "Check dependencies for /path/to/project"
+uv run test_orchestrator.py "Check dependencies for /path/to/project"
 ```
 
 ## Benefits of This Implementation
