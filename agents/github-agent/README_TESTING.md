@@ -57,9 +57,8 @@ aws bedrock list-foundation-models --region ap-southeast-2
 
 ### Step 3: Run LLM Tests
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
-python test_with_aws.py
+uv run test_with_aws.py
 ```
 
 ### What You'll See
@@ -318,13 +317,13 @@ aws sso login --profile your-profile
 
 ```bash
 # Architecture tests (no AWS)
-python validate_architecture.py
+uv run validate_architecture.py
 
 # LLM tests (needs AWS)
-python test_with_aws.py
+uv run test_with_aws.py
 
 # Interactive with LLM
-python test_with_aws.py
+uv run test_with_aws.py
 # Choose 'y' for interactive
 
 # Real GitHub API (needs OAuth)
@@ -356,7 +355,7 @@ agentcore invoke --message "test"
 ### Right Now (No AWS Setup)
 ```bash
 # You've already done this!
-python validate_architecture.py
+uv run validate_architecture.py
 ```
 
 ### Next Step (With AWS)
@@ -365,8 +364,7 @@ python validate_architecture.py
 aws sso login --profile your-profile
 
 # 2. Test LLM
-source .venv/bin/activate
-python test_with_aws.py
+uv run test_with_aws.py
 
 # 3. Try interactive mode (fun!)
 # Choose 'y' when prompted
@@ -399,7 +397,7 @@ You've successfully:
 
 To test the rest:
 1. Get AWS credentials
-2. Run `python test_with_aws.py`
+2. Run `uv run test_with_aws.py`
 3. Try interactive mode for fun!
 
 **The refactoring is complete and working!** 🚀

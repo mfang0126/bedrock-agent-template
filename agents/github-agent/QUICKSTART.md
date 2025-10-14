@@ -19,9 +19,8 @@ Runs architecture tests automatically, asks before AWS tests:
 
 #### Step 1: Architecture Only (No AWS)
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
-python validate_architecture.py
+uv run validate_architecture.py
 ```
 
 **Result:** ✅ All 6 architecture tests pass in <5 seconds
@@ -47,9 +46,8 @@ export AWS_DEFAULT_REGION=ap-southeast-2
 
 Then test:
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
-python test_with_aws.py
+uv run test_with_aws.py
 ```
 
 **Result:** LLM responds to queries, streaming works
@@ -117,13 +115,13 @@ agentcore invoke --user-id YOUR_USERNAME --message "test"
 
 ```bash
 # Architecture only (fastest)
-python validate_architecture.py
+uv run validate_architecture.py
 
 # With AWS Bedrock
-python test_with_aws.py
+uv run test_with_aws.py
 
 # Interactive with LLM
-python test_with_aws.py
+uv run test_with_aws.py
 # Then choose 'y' for interactive mode
 
 # AgentCore local
@@ -184,19 +182,19 @@ After refactoring:
 
 1. **Test architecture** (already done ✅)
    ```bash
-   python validate_architecture.py
+   uv run validate_architecture.py
    ```
 
 2. **Test with your AWS credentials** (if you have them)
    ```bash
    aws sso login --profile your-profile
    export AWS_PROFILE=your-profile
-   python test_with_aws.py
+   uv run test_with_aws.py
    ```
 
 3. **Try interactive mode** (fun!)
    ```bash
-   python test_with_aws.py
+   uv run test_with_aws.py
    # Choose 'y' for interactive mode
    # Ask: "What can you help me with?"
    ```
@@ -229,5 +227,5 @@ Ready to test? Start with:
 Or jump straight to AWS testing:
 ```bash
 aws sso login --profile your-profile
-python test_with_aws.py
+uv run test_with_aws.py
 ```

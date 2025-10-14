@@ -1,44 +1,31 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 
-# All environment variables in one layer
+# Environment variables for Python and AWS
 ENV UV_SYSTEM_PYTHON=1 \
     UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
     DOCKER_CONTAINER=1 \
     AWS_REGION=ap-southeast-2 \
     AWS_DEFAULT_REGION=ap-southeast-2
 
-
-
+# Copy project files (respecting .dockerignore)
 COPY . .
-# Install from pyproject.toml directory
-RUN cd . && uv pip install .
 
+# Install dependencies from pyproject.toml
+RUN uv pip install .
 
+# Create non-root user for security
+RUN useradd -m -u 1000 bedrock_agentcore && \
+    chown -R bedrock_agentcore:bedrock_agentcore /app
 
-
-
-# Set AWS region environment variable
-
-ENV AWS_REGION=ap-southeast-2
-ENV AWS_DEFAULT_REGION=ap-southeast-2
-
-
-# Signal that this is running in Docker for host binding logic
-ENV DOCKER_CONTAINER=1
-
-# Create non-root user
-RUN useradd -m -u 1000 bedrock_agentcore
 USER bedrock_agentcore
 
+# Expose ports for AgentCore runtime
 EXPOSE 9000
 EXPOSE 8000
 EXPOSE 8080
 
-# Copy entire project (respecting .dockerignore)
-COPY . .
-
-# Use the full module path
-
+# Run the agent runtime
 CMD ["python", "-m", "src.runtime"]

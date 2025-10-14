@@ -8,9 +8,9 @@ from strands import Agent
 from strands.models import BedrockModel
 
 from src.auth import GitHubAuth
-from src.tools.repos import GitHubRepoTools
-from src.tools.issues import GitHubIssueTools
-from src.tools.pull_requests import GitHubPRTools
+from src.tools.repos import github_repo_tools
+from src.tools.issues import github_issue_tools
+from src.tools.pull_requests import github_pr_tools
 
 
 # Model configuration
@@ -24,6 +24,9 @@ def create_github_agent(auth: GitHubAuth) -> Agent:
     This factory function creates a fully configured GitHub agent using
     the provided authentication implementation. The agent is testable
     with MockGitHubAuth or production-ready with AgentCoreGitHubAuth.
+
+    Uses function-based tools with closures for stateless operations,
+    following Strands best practices.
 
     Args:
         auth: GitHubAuth implementation (mock or real OAuth)
@@ -44,32 +47,17 @@ def create_github_agent(auth: GitHubAuth) -> Agent:
         >>> agent = create_github_agent(auth)
         >>> response = agent.stream_async("Create an issue")
     """
-    # Initialize tool classes with auth injection
-    repo_tools = GitHubRepoTools(auth)
-    issue_tools = GitHubIssueTools(auth)
-    pr_tools = GitHubPRTools(auth)
-
     # Create Bedrock model
     model = BedrockModel(model_id=MODEL_ID, region_name=REGION)
 
-    # Create agent with all tools from tool classes
+    # Create agent with all tools from factory functions
+    # Each factory returns a sequence of tools with auth captured in closure
     agent = Agent(
         model=model,
         tools=[
-            # Repository tools
-            repo_tools.list_github_repos,
-            repo_tools.get_repo_info,
-            repo_tools.create_github_repo,
-            # Issue tools
-            issue_tools.list_github_issues,
-            issue_tools.create_github_issue,
-            issue_tools.close_github_issue,
-            issue_tools.post_github_comment,
-            issue_tools.update_github_issue,
-            # Pull request tools
-            pr_tools.create_pull_request,
-            pr_tools.list_pull_requests,
-            pr_tools.merge_pull_request,
+            *github_repo_tools(auth),      # Repository tools
+            *github_issue_tools(auth),     # Issue tools
+            *github_pr_tools(auth),        # Pull request tools
         ],
         system_prompt="""You are a GitHub assistant. Use your tools to help users with repositories, issues, and pull requests.
 

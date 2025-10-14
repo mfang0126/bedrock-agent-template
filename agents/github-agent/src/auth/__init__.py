@@ -13,7 +13,14 @@ from typing import Optional, Callable
 
 from .interface import GitHubAuth
 from .mock import MockGitHubAuth
-from .agentcore import AgentCoreGitHubAuth
+
+# Optional import for production/dev environments
+try:
+    from .agentcore import AgentCoreGitHubAuth
+    _AGENTCORE_AVAILABLE = True
+except ImportError:
+    _AGENTCORE_AVAILABLE = False
+    AgentCoreGitHubAuth = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -48,5 +55,10 @@ def get_auth_provider(
         logger.info(f"🧪 Using mock authentication for environment: {env}")
         return MockGitHubAuth()
     else:
+        if not _AGENTCORE_AVAILABLE:
+            raise ImportError(
+                "bedrock_agentcore is required for production environments. "
+                "Install with: uv pip install bedrock-agentcore[strands-agents]"
+            )
         logger.info(f"🔐 Using AgentCore OAuth for environment: {env}")
         return AgentCoreGitHubAuth(oauth_url_callback=oauth_url_callback)

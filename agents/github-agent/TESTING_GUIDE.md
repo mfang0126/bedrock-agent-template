@@ -37,13 +37,12 @@ This guide shows you how to test the GitHub agent at different levels, from loca
 
 ### Setup
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
 ```
 
 ### Run Tests
 ```bash
-python validate_architecture.py
+uv run validate_architecture.py
 ```
 
 ### Expected Output
@@ -114,14 +113,13 @@ aws bedrock list-foundation-models --region ap-southeast-2 --query "modelSummari
 
 ### Run Tests
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
 
 # Automated tests
-python test_with_aws.py
+uv run test_with_aws.py
 
 # Or interactive mode
-python -c "
+uv run python -c "
 import asyncio
 from test_with_aws import interactive_mode
 asyncio.run(interactive_mode())
@@ -327,10 +325,10 @@ agentcore invoke --agent github-prod --user-id YOUR_USERNAME --message "List my 
 vim src/tools/repos.py
 
 # 2. Validate architecture (<5 sec)
-python validate_architecture.py
+uv run validate_architecture.py
 
 # 3. Test with LLM (30-60 sec, if needed)
-python test_with_aws.py
+uv run test_with_aws.py
 
 # 4. Commit when ready
 git add . && git commit -m "Update tool"
@@ -339,10 +337,10 @@ git add . && git commit -m "Update tool"
 ### 🧪 Pre-Deployment Checklist
 ```bash
 # 1. Architecture tests pass
-python validate_architecture.py
+uv run validate_architecture.py
 
 # 2. LLM inference works
-python test_with_aws.py
+uv run test_with_aws.py
 
 # 3. AgentCore local works
 agentcore launch --local
@@ -360,7 +358,7 @@ agentcore invoke --agent github-dev --user-id YOUR_USERNAME --message "List repo
 #### Architecture Issues
 ```bash
 # Test components individually
-python -c "
+uv run python -c "
 from src.auth import MockGitHubAuth
 from src.tools.repos import GitHubRepoTools
 from src.agent import create_github_agent
@@ -382,7 +380,7 @@ aws bedrock list-foundation-models --region ap-southeast-2
 
 # Test with verbose logging
 export LOG_LEVEL=DEBUG
-python test_with_aws.py
+uv run test_with_aws.py
 ```
 
 #### OAuth Issues
@@ -480,11 +478,11 @@ Create a `test.sh` script:
 set -e
 
 echo "Running architecture tests..."
-python validate_architecture.py
+uv run validate_architecture.py
 
 if [ -n "$AWS_PROFILE" ]; then
     echo "Running AWS integration tests..."
-    python test_with_aws.py
+    uv run test_with_aws.py
 fi
 
 echo "✅ All tests passed!"

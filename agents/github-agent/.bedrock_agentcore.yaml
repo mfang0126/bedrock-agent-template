@@ -5,7 +5,6 @@ agents:
     entrypoint: src/runtime.py
     platform: linux/arm64
     container_runtime: docker
-    source_path: null
     aws:
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKRuntime-ap-southeast-2-c0b0109d94
       execution_role_auto_create: false
@@ -15,7 +14,6 @@ agents:
       ecr_auto_create: false
       network_configuration:
         network_mode: PUBLIC
-        network_mode_config: null
       protocol_configuration:
         server_protocol: HTTP
       observability:
@@ -23,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: github-Hn7UKwBMRj
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/github-Hn7UKwBMRj
-      agent_session_id: e128864e-44bb-44e4-b4c2-c8563cff181c
+      agent_session_id: c90697a1-26a0-487b-8373-d5c32c33f604
     codebuild:
       project_name: bedrock-agentcore-github-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
@@ -35,7 +33,6 @@ agents:
       memory_name: github_mem
       event_expiry_days: 30
       first_invoke_memory_check_done: true
-      was_created_by_toolkit: false
     authorizer_configuration: null
     request_header_configuration: null
     oauth_configuration:

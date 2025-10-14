@@ -8,9 +8,8 @@ The GitHub agent refactoring **successfully separates testable logic from AWS de
 
 ### Architecture Validation ✓
 ```bash
-source .venv/bin/activate
 export AGENT_ENV=local
-python validate_architecture.py
+uv run validate_architecture.py
 ```
 
 **Tests:**
@@ -76,7 +75,7 @@ uv pip install -e .
 ### Step 2: Validate Architecture (No AWS)
 ```bash
 export AGENT_ENV=local
-python validate_architecture.py
+uv run validate_architecture.py
 ```
 
 **Expected output:**
@@ -102,7 +101,7 @@ export AWS_ACCESS_KEY_ID=your_key
 export AWS_SECRET_ACCESS_KEY=your_secret
 export AWS_DEFAULT_REGION=ap-southeast-2
 
-python test_local.py
+uv run test_local.py
 ```
 
 ## 📊 Test Coverage
@@ -138,7 +137,7 @@ Edit `src/agent.py`, `src/tools/*.py`, `src/auth/*.py`
 
 ### 2. Validate Locally (Fast)
 ```bash
-python validate_architecture.py  # <5 seconds
+uv run validate_architecture.py  # <5 seconds
 ```
 
 ### 3. Deploy to Test Integration (Slow)
