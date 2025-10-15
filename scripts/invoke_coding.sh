@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Invoke Jira Agent
+# Invoke Coding Agent (AWS Deployed)
+# This script invokes the DEPLOYED agent in AWS Bedrock AgentCore
 
 set -e
 
 echo "=========================================="
-echo "📋 Invoking Jira Agent"
+echo "💻 Invoking Coding Agent (AWS)"
 echo "=========================================="
 echo ""
 
@@ -13,10 +14,15 @@ echo ""
 if [ $# -eq 0 ]; then
     echo "Usage: $0 'your prompt here'"
     echo ""
+    echo "⚠️  NOTE: This invokes the DEPLOYED agent in AWS"
+    echo ""
     echo "Examples:"
-    echo "  $0 'list my projects'"
-    echo "  $0 'create an issue in project ABC'"
+    echo "  $0 'list all Python files'"
+    echo "  $0 'analyze project structure'"
     echo "  $0 'what can you do'"
+    echo ""
+    echo "For LOCAL testing without AWS:"
+    echo "  uv run scripts/test_coding_local.py 'your prompt here'"
     exit 1
 fi
 
@@ -27,7 +33,7 @@ echo ""
 
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-AGENT_DIR="${SCRIPT_DIR}/agents/jira-agent"
+AGENT_DIR="${SCRIPT_DIR}/../agents/coding-agent"
 
 cd "${AGENT_DIR}"
 

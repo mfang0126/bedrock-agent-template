@@ -47,7 +47,7 @@ coding-agent-agentcore/
 ### Step 1: Make Scripts Executable
 
 ```bash
-chmod +x deploy_agents.sh invoke_github.sh invoke_jira.sh
+chmod +x deploy_agents.sh scripts/invoke_github.sh scripts/invoke_jira.sh
 ```
 
 ### Step 2: Deploy Both Agents
@@ -76,26 +76,26 @@ Jira Agent ARN: arn:aws:bedrock-agentcore:region:account:runtime/jira-agent-XXXX
 
 ```bash
 # Basic test
-./invoke_github.sh "what can you do"
+scripts/invoke_github.sh "what can you do"
 
 # List repositories
-./invoke_github.sh "list my repositories"
+scripts/invoke_github.sh "list my repositories"
 
 # Create an issue
-./invoke_github.sh "create an issue titled 'Test Issue' with label 'bug'"
+scripts/invoke_github.sh "create an issue titled 'Test Issue' with label 'bug'"
 ```
 
 ### Test Jira Agent
 
 ```bash
 # Basic test
-./invoke_jira.sh "what can you do"
+scripts/invoke_jira.sh "what can you do"
 
 # List projects
-./invoke_jira.sh "list my projects"
+scripts/invoke_jira.sh "list my projects"
 
 # Create an issue
-./invoke_jira.sh "create an issue in project ABC with title 'Test Task'"
+scripts/invoke_jira.sh "create an issue in project ABC with title 'Test Task'"
 ```
 
 ## 📊 Understanding the Output

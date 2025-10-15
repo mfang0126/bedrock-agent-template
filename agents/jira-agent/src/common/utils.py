@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class AgentResponse:
     """Standardized agent response structure."""
-
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
@@ -36,14 +35,14 @@ class AgentResponse:
 
 
 def clean_json_response(
-    raw_response: str, agent_type: str = "unknown"
+    raw_response: str, agent_type: str = "jira"
 ) -> AgentResponse:
     """
     Clean and standardize agent responses into a consistent JSON structure.
 
     Args:
         raw_response: Raw response from agent
-        agent_type: Type of agent (planning, github, jira, etc.)
+        agent_type: Type of agent (jira)
 
     Returns:
         Standardized AgentResponse object
@@ -63,6 +62,24 @@ def clean_json_response(
 
     # Handle plain text responses
     return AgentResponse(success=True, message=raw_response, agent_type=agent_type)
+
+
+def create_error_response(error_message: str, agent_type: str = "jira") -> AgentResponse:
+    """
+    Create a standardized error response.
+
+    Args:
+        error_message: Error message text
+        agent_type: Type of agent
+
+    Returns:
+        AgentResponse with error details
+    """
+    return AgentResponse(
+        success=False,
+        message=f"Error: {error_message}",
+        agent_type=agent_type,
+    )
 
 
 def extract_text_from_event(event: Dict[str, Any]) -> List[str]:
@@ -134,38 +151,6 @@ def log_server_message(message: str, level: str = "info") -> None:
     print(f"{emoji} Server log - {message}")
 
 
-def format_client_text(text: str, add_newline: bool = True) -> str:
-    """
-    Format text for client output with optional newline.
-
-    Args:
-        text: Text to format
-        add_newline: Whether to add newline at end (default: True)
-
-    Returns:
-        Formatted text string
-    """
-    return text + "\n" if add_newline else text
-
-
-def create_error_response(error_message: str, agent_type: str = "unknown") -> AgentResponse:
-    """
-    Create a standardized error response.
-
-    Args:
-        error_message: Error message text
-        agent_type: Type of agent
-
-    Returns:
-        AgentResponse with error details
-    """
-    return AgentResponse(
-        success=False,
-        message=f"Error: {error_message}",
-        agent_type=agent_type,
-    )
-
-
 def create_oauth_message(oauth_url: str, service: str = "JIRA") -> str:
     """
     Create standardized OAuth authorization message.
@@ -184,3 +169,17 @@ Please visit this URL to authorize access to your {service} account:
 {oauth_url}
 
 After authorizing, please run your command again to access your {service} data."""
+
+
+def format_client_text(text: str, add_newline: bool = True) -> str:
+    """
+    Format text for client output with optional newline.
+
+    Args:
+        text: Text to format
+        add_newline: Whether to add newline at end (default: True)
+
+    Returns:
+        Formatted text string
+    """
+    return text + "\n" if add_newline else text

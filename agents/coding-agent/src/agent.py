@@ -18,10 +18,10 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 
 # Import tools
-from tools.workspace_manager import WorkspaceManager
-from tools.file_operations import FileOperations
-from tools.command_executor import CommandExecutor
-from tools.test_runner import TestRunner
+from src.tools.workspace_manager import WorkspaceManager
+from src.tools.file_operations import FileOperations
+from src.tools.command_executor import CommandExecutor
+from src.tools.test_runner import TestRunner
 
 logger = logging.getLogger(__name__)
 

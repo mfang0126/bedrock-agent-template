@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: planning-jDw1hm2ip6
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/planning-jDw1hm2ip6
-      agent_session_id: 98abc54b-9f0e-4cbf-8534-0977322fd980
+      agent_session_id: b3ff7fc7-89a1-4937-a9d8-385298d766f7
     codebuild:
       project_name: bedrock-agentcore-planning-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-423614833c

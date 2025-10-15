@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: codingagent-lE7IQU3dK8
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/codingagent-lE7IQU3dK8
-      agent_session_id: null
+      agent_session_id: a7532fd9-18be-4745-9974-005710d49c3d
     codebuild:
       project_name: bedrock-agentcore-codingagent-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-3e99a3f99b

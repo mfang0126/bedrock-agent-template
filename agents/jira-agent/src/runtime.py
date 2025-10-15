@@ -42,12 +42,13 @@ async def handle_client_mode(agent, user_input: str) -> AsyncIterator[str]:
         response_chunks = []
         
         async for event in agent.stream_async(user_input):
-            # Yield raw event for streaming UI
-            yield event
-            
-            # Collect text for final summary
-            texts = extract_text_from_event(event)
-            response_chunks.extend(texts)
+            # Extract text from different event formats
+            extracted_texts = extract_text_from_event(event)
+
+            # Yield all extracted texts to client
+            for text in extracted_texts:
+                response_chunks.append(text)
+                yield text
         
         # Create final summary
         if response_chunks:

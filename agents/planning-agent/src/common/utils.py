@@ -8,18 +8,16 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class AgentResponse:
-    """Standardized response wrapper for the Planning agent."""
+    """Standardized agent response structure."""
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-    timestamp: str = None
-    agent_type: str = "planning"
+    timestamp: Optional[str] = None
+    agent_type: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.timestamp is None:
             self.timestamp = datetime.utcnow().isoformat()
-        if not self.agent_type:
-            self.agent_type = "planning"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the response into a serializable dictionary."""
@@ -45,12 +43,21 @@ def clean_json_response(raw_response: str, agent_type: str = "planning") -> Agen
                 success=parsed.get("success", True),
                 message=parsed.get("message", ""),
                 data=parsed.get("data"),
-                agent_type=agent_type or "planning",
+                agent_type=agent_type,
             )
     except json.JSONDecodeError:
         pass
 
-    return AgentResponse(success=True, message=raw_response, agent_type=agent_type or "planning")
+    return AgentResponse(success=True, message=raw_response, agent_type=agent_type)
+
+
+def create_error_response(error_message: str, agent_type: str = "planning") -> AgentResponse:
+    """Create a standardized error response."""
+    return AgentResponse(
+        success=False,
+        message=f"Error: {error_message}",
+        agent_type=agent_type,
+    )
 
 
 def format_planning_response(
@@ -110,13 +117,5 @@ def format_planning_response(
             "requirements": requirements,
             "validation": validation_results,
         },
-    )
-
-
-def create_error_response(error_message: str, agent_type: str = "planning") -> AgentResponse:
-    """Create a standardized error response."""
-    return AgentResponse(
-        success=False,
-        message=f"Error: {error_message}",
-        agent_type=agent_type,
+        agent_type="planning"
     )

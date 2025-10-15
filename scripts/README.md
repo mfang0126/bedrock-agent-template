@@ -196,3 +196,72 @@ uv run agentcore launch --agent orchestrator
 ```bash
 uv run agentcore logs --agent orchestrator --follow
 ```
+
+---
+
+## Testing Agents
+
+There are two ways to test agents:
+
+### 1. Local Testing (No AWS Required)
+
+Test agents locally with mock authentication:
+
+```bash
+# Coding Agent (no auth needed)
+uv run scripts/test_coding_local.py 'what can you do'
+uv run scripts/test_coding_local.py 'create a hello world script'
+
+# GitHub Agent (mock auth - structure testing only)
+uv run scripts/test_github_local.py 'what can you do'
+uv run scripts/test_github_local.py 'explain your tools'
+
+# JIRA Agent (mock auth - structure testing only)
+uv run scripts/test_jira_local.py 'what can you do'
+uv run scripts/test_jira_local.py 'list available operations'
+```
+
+**Pros:**
+- Fast iteration
+- No AWS deployment needed
+- No OAuth configuration required
+- Good for testing agent logic and structure
+
+**Cons:**
+- GitHub/JIRA API calls will fail (mock tokens aren't real)
+- Can't test real OAuth flows
+- Can't test deployed integrations
+
+### 2. AWS Deployment Testing
+
+Test deployed agents in AWS:
+
+```bash
+# Must be deployed first
+./invoke_coding.sh 'what can you do'
+./invoke_github.sh 'list my repositories'  # Requires OAuth
+./invoke_jira.sh 'show my projects'  # Requires OAuth
+./invoke_orchestrator.sh 'coordinate agents'
+./invoke_planning.sh 'plan a task'
+```
+
+**Pros:**
+- Tests real OAuth flows
+- Tests actual API integrations
+- End-to-end validation
+- Production-like environment
+
+**Cons:**
+- Requires AWS deployment
+- Requires OAuth configuration
+- Slower iteration cycle
+
+### Quick Reference
+
+| Agent | Local Testing | AWS Testing |
+|-------|--------------|-------------|
+| Coding | `uv run scripts/test_coding_local.py` | `./invoke_coding.sh` |
+| GitHub | `uv run scripts/test_github_local.py` | `./invoke_github.sh` |
+| JIRA | `uv run scripts/test_jira_local.py` | `./invoke_jira.sh` |
+| Orchestrator | N/A | `./invoke_orchestrator.sh` |
+| Planning | N/A | `./invoke_planning.sh` |

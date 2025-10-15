@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Invoke GitHub Agent
+# Invoke Planning Agent
 
 set -e
 
 echo "=========================================="
-echo "🐙 Invoking GitHub Agent"
+echo "📋 Invoking Planning Agent"
 echo "=========================================="
 echo ""
 
@@ -14,8 +14,8 @@ if [ $# -eq 0 ]; then
     echo "Usage: $0 'your prompt here'"
     echo ""
     echo "Examples:"
-    echo "  $0 'list my repositories'"
-    echo "  $0 'create an issue titled Test Issue'"
+    echo "  $0 'plan authentication system implementation'"
+    echo "  $0 'create project roadmap'"
     echo "  $0 'what can you do'"
     exit 1
 fi
@@ -27,7 +27,7 @@ echo ""
 
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-AGENT_DIR="${SCRIPT_DIR}/agents/github-agent"
+AGENT_DIR="${SCRIPT_DIR}/../agents/planning-agent"
 
 cd "${AGENT_DIR}"
 

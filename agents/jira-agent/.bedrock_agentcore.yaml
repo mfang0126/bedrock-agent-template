@@ -21,7 +21,7 @@ agents:
     bedrock_agentcore:
       agent_id: jira_agent-WboCCb8qfb
       agent_arn: arn:aws:bedrock-agentcore:ap-southeast-2:670326884047:runtime/jira_agent-WboCCb8qfb
-      agent_session_id: eb19a8b8-bf0f-4b20-87e8-345acf446822
+      agent_session_id: 59d0cf22-8350-42c8-8999-18d6786bd789
     codebuild:
       project_name: bedrock-agentcore-jira_agent-builder
       execution_role: arn:aws:iam::670326884047:role/AmazonBedrockAgentCoreSDKCodeBuild-ap-southeast-2-c0b0109d94
@@ -36,6 +36,6 @@ agents:
     authorizer_configuration: null
     request_header_configuration: null
     oauth_configuration:
-      workload_name: jira-agent-workload
+      workload_name: jira_agent-WboCCb8qfb
       credential_providers:
       - jira-provider

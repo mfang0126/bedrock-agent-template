@@ -9,14 +9,13 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class AgentResponse:
     """Standardized agent response structure."""
-
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-    timestamp: str = None
-    agent_type: str = None
+    timestamp: Optional[str] = None
+    agent_type: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.timestamp is None:
             self.timestamp = datetime.utcnow().isoformat()
 
@@ -36,14 +35,14 @@ class AgentResponse:
 
 
 def clean_json_response(
-    raw_response: str, agent_type: str = "unknown"
+    raw_response: str, agent_type: str = "github"
 ) -> AgentResponse:
     """
     Clean and standardize agent responses into a consistent JSON structure.
 
     Args:
         raw_response: Raw response from agent
-        agent_type: Type of agent (planning, github, etc.)
+        agent_type: Type of agent (github)
 
     Returns:
         Standardized AgentResponse object
@@ -63,6 +62,24 @@ def clean_json_response(
 
     # Handle plain text responses
     return AgentResponse(success=True, message=raw_response, agent_type=agent_type)
+
+
+def create_error_response(error_message: str, agent_type: str = "github") -> AgentResponse:
+    """
+    Create a standardized error response.
+
+    Args:
+        error_message: Error message text
+        agent_type: Type of agent
+
+    Returns:
+        AgentResponse with error details
+    """
+    return AgentResponse(
+        success=False,
+        message=f"Error: {error_message}",
+        agent_type=agent_type,
+    )
 
 
 def extract_text_from_event(event: Dict[str, Any]) -> List[str]:
@@ -134,23 +151,24 @@ def log_server_message(message: str, level: str = "info") -> None:
     print(f"{emoji} Server log - {message}")
 
 
-def create_oauth_message(oauth_url: str) -> str:
+def create_oauth_message(oauth_url: str, service: str = "GitHub") -> str:
     """
     Create standardized OAuth authorization message.
 
     Args:
         oauth_url: OAuth authorization URL
+        service: Service name (GitHub, JIRA, etc.)
 
     Returns:
         Formatted OAuth message with URL
     """
-    return f"""🔐 GitHub Authorization Required
+    return f"""🔐 {service} Authorization Required
 
-Please visit this URL to authorize access to your GitHub account:
+Please visit this URL to authorize access to your {service} account:
 
 {oauth_url}
 
-After authorizing, please run your command again to access your GitHub data."""
+After authorizing, please run your command again to access your {service} data."""
 
 
 def format_client_text(text: str, add_newline: bool = True) -> str:
